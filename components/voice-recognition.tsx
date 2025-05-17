@@ -4,6 +4,50 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Mic, MicOff } from "lucide-react"
 
+// Type definitions for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  results: {
+    item(index: number): {
+      item(index: number): {
+        transcript: string
+      }
+    }
+    [index: number]: {
+      [index: number]: {
+        transcript: string
+      }
+    }
+  }
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start(): void
+  stop(): void
+  abort(): void
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null
+  onend: ((this: SpeechRecognition, ev: Event) => any) | null
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null
+  onstart: ((this: SpeechRecognition, ev: Event) => any) | null
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor
+    webkitSpeechRecognition?: SpeechRecognitionConstructor
+  }
+}
+
 interface VoiceRecognitionProps {
   onResult: (transcript: string) => void
   isListening: boolean
@@ -12,12 +56,12 @@ interface VoiceRecognitionProps {
 
 export default function VoiceRecognition({ onResult, isListening, setIsListening }: VoiceRecognitionProps) {
   const [error, setError] = useState<string | null>(null)
-  const [recognition, setRecognition] = useState<any>(null)
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null)
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       // Browser compatibility check
-      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
       if (!SpeechRecognition) {
         setError("Speech recognition is not supported in your browser.")
@@ -35,14 +79,14 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
         setError(null)
       }
 
-      recognitionInstance.onresult = (event: any) => {
+      recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         console.log("Speech recognition result received", event.results)
         const transcript = event.results[0][0].transcript
         setIsListening(false)
         onResult(transcript)
       }
 
-      recognitionInstance.onerror = (event: any) => {
+      recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error("Speech recognition error", event.error)
         let errorMessage = `Error: ${event.error}`
         
@@ -104,7 +148,7 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
       <Button
         onClick={toggleListening}
         className={`rounded-full w-16 h-16 flex items-center justify-center ${
-          isListening ? "bg-red-500 hover:bg-red-600" : "bg-[#0071e3] hover:bg-[#0077ed]"
+          isListening ? "bg-red-500 hover:bg-red-600" : "bg-[#9747FF] hover:bg-[#8539FF]"
         }`}
         aria-label={isListening ? "Stop listening" : "Start listening"}
       >
@@ -113,8 +157,8 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
 
       {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-      <p className="text-sm text-[#86868b] text-center">
-        {isListening ? "Speak now..." : "Tap the microphone and say the letter you see"}
+      <p className="text-sm text-[#666666] text-center">
+        {isListening ? "Speak now..." : "Tap the microphone and say the letters you see"}
       </p>
     </div>
   )

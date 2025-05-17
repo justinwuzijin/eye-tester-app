@@ -7,22 +7,36 @@ import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { ArrowRight, Mic, Volume2 } from "lucide-react"
 import DistanceGuide from "@/components/distance-guide"
-import LetterDisplay from "@/components/letter-display"
 import VoiceRecognition from "@/components/voice-recognition"
+import MicrophoneSetup from "@/components/microphone-setup"
 
-// Snellen chart letters (commonly used in eye tests)
-const LETTERS = ["E", "F", "P", "T", "O", "Z", "L", "D", "C"]
-// Font sizes in pixels, decreasing to simulate distance
-const SIZES = [120, 100, 80, 60, 48, 36, 28, 22, 18]
+// Generate random string of lowercase letters
+const generateRandomString = (length: number) => {
+  const letters = 'abcdefghijklmnopqrstuvwxyz'
+  return Array.from({ length }, () => letters[Math.floor(Math.random() * letters.length)]).join('')
+}
+
+// Font sizes in pixels, 5 distinct levels
+const SIZES = [96, 72, 48, 32, 24]
+
+// Simplified color palette
+const LEVEL_COLORS = [
+  { bg: '#F0F7FF', text: '#0066FF' },
+  { bg: '#F3F0FF', text: '#6B2FFA' },
+  { bg: '#FFF0F6', text: '#FA2FB7' },
+  { bg: '#FFF4E5', text: '#FF8A00' },
+  { bg: '#ECFDF3', text: '#12B76A' }
+]
 
 export default function Home() {
   const [step, setStep] = useState<"intro" | "distance" | "test" | "results">("intro")
-  const [currentLetterIndex, setCurrentLetterIndex] = useState(0)
+  const [currentString, setCurrentString] = useState("")
   const [currentSizeIndex, setCurrentSizeIndex] = useState(0)
   const [results, setResults] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 })
   const [isListening, setIsListening] = useState(false)
   const [progress, setProgress] = useState(0)
   const [lastTranscript, setLastTranscript] = useState<string>("")
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false)
   const router = useRouter()
   const synth = useRef<SpeechSynthesis | null>(null)
 
@@ -30,7 +44,6 @@ export default function Home() {
     if (typeof window !== "undefined") {
       synth.current = window.speechSynthesis
     }
-
     return () => {
       if (synth.current && synth.current.speaking) {
         synth.current.cancel()
@@ -54,167 +67,265 @@ export default function Home() {
 
   const startLetterTest = () => {
     setStep("test")
-    setCurrentLetterIndex(Math.floor(Math.random() * LETTERS.length))
+    setCurrentString(generateRandomString(5))
     setCurrentSizeIndex(0)
     setResults({ correct: 0, total: 0 })
     setProgress(0)
-
+    setLastTranscript("")
     setTimeout(() => {
-      speakText("Please read the letter aloud when you see it.")
+      speakText("Level 1. Please read the letters aloud when you see them.")
     }, 500)
-  }
-
-  const handleVoiceResult = (transcript: string) => {
-    const currentLetter = LETTERS[currentLetterIndex]
-    const isCorrect = transcript.toUpperCase().includes(currentLetter)
-    setLastTranscript(transcript)
-
-    setResults((prev) => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1,
-    }))
-
-    // Move to next letter or size
-    if (currentSizeIndex < SIZES.length - 1) {
-      const nextSizeIndex = currentSizeIndex + 1
-      setCurrentSizeIndex(nextSizeIndex)
-      setCurrentLetterIndex(Math.floor(Math.random() * LETTERS.length))
-      setProgress((nextSizeIndex / (SIZES.length - 1)) * 100)
-      
-      // Add feedback for correct/incorrect answer
-      if (isCorrect) {
-        speakText("Correct. Next letter.")
-      } else {
-        speakText("Moving to next letter.")
-      }
-    } else {
-      setStep("results")
-      speakText("Test complete. View your results.")
-    }
   }
 
   const restartTest = () => {
     setStep("intro")
+    setCurrentString("")
     setCurrentSizeIndex(0)
     setResults({ correct: 0, total: 0 })
     setProgress(0)
+    setLastTranscript("")
+    if (synth.current && synth.current.speaking) {
+      synth.current.cancel()
+    }
   }
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-6 bg-[#f5f5f7]">
-      <div className="w-full max-w-md mx-auto">
-        <h1 className="text-[32px] font-semibold text-center mb-8 text-[#1d1d1f] tracking-tight">
-          {step === "intro" && "Vision Test"}
-          {step === "distance" && "Position Your Device"}
-          {step === "test" && "Read the Letter"}
-          {step === "results" && "Test Results"}
-        </h1>
+  const handleVoiceResult = (transcript: string) => {
+    const normalizedTranscript = transcript.toLowerCase().replace(/\s+/g, '')
+    const isCorrect = normalizedTranscript.includes(currentString)
+    setLastTranscript(transcript)
 
-        <Card className="p-8 shadow-sm bg-white rounded-2xl border-0">
+    if (isCorrect) {
+      setResults((prev) => ({
+        correct: prev.correct + 1,
+        total: prev.total + 1,
+      }))
+
+      if (currentSizeIndex < SIZES.length - 1) {
+        const nextSizeIndex = currentSizeIndex + 1
+        setCurrentSizeIndex(nextSizeIndex)
+        setCurrentString(generateRandomString(5))
+        setProgress((nextSizeIndex / (SIZES.length - 1)) * 100)
+        speakText(`Correct. Level ${nextSizeIndex + 1}.`)
+      } else {
+        setStep("results")
+        speakText("Test complete. View your results.")
+      }
+    } else {
+      setResults((prev) => ({
+        ...prev,
+        total: prev.total + 1,
+      }))
+      speakText(`Incorrect. Please try again for level ${currentSizeIndex + 1}.`)
+    }
+  }
+
+  const currentColor = LEVEL_COLORS[currentSizeIndex]
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA]">
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-sm bg-[#6B2FFA]"></div>
+            <h2 className="text-[15px] font-medium text-[#2C2C2C]">4Sight</h2>
+          </div>
+          {step !== "intro" && (
+            <button 
+              onClick={restartTest}
+              className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] transition-colors"
+            >
+              Start Over
+            </button>
+          )}
+        </div>
+
+        {/* Title Section */}
+        <div className="space-y-4 mb-8">
+          <h1 className="text-[32px] font-semibold text-[#2C2C2C] tracking-tight">
+            {step === "intro" && "Test Your Vision"}
+            {step === "distance" && "Position Device"}
+            {step === "test" && "Snellen Test"}
+            {step === "results" && "Results"}
+          </h1>
+          <p className="text-[15px] text-[#666666] leading-relaxed">
+            {step === "intro" && "A simple vision test using letter recognition and voice input"}
+            {step === "distance" && "Ensure proper distance for accurate results"}
+            {step === "test" && "Speak the letters clearly into your microphone"}
+            {step === "results" && "Review your test results"}
+          </p>
+        </div>
+
+        {/* Main Card */}
+        <Card className="overflow-hidden border-0 shadow-lg rounded-xl">
           {step === "intro" && (
-            <div className="space-y-8">
-              <p className="text-[17px] leading-relaxed text-[#86868b] text-center font-medium">
-                This app will test your vision using letters of decreasing size. You'll need to enable your microphone
-                to respond.
-              </p>
-              <div className="flex justify-center">
+            <div>
+              <div className="px-8 py-10 bg-white">
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <p className="text-[15px] text-[#2C2C2C] leading-relaxed">
+                      This app will test your vision using letters of decreasing size. You'll need to enable your microphone
+                      to respond.
+                    </p>
+                    <p className="text-[14px] text-[#666666] leading-relaxed">
+                      Speak clearly and read all letters from left to right.
+                    </p>
+                  </div>
+                  
+                  <MicrophoneSetup onPermissionGranted={() => setMicPermissionGranted(true)} />
+                </div>
+              </div>
+              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
                 <Button 
-                  onClick={startTest} 
-                  className="bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-full px-8 py-6 text-[17px] font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                  onClick={startTest}
+                  disabled={!micPermissionGranted}
+                  className={`bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200 ${
+                    !micPermissionGranted && 'opacity-50 cursor-not-allowed'
+                  }`}
                 >
-                  Start Test <ArrowRight className="ml-2 h-5 w-5" />
+                  Start Test <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
 
           {step === "distance" && (
-            <div className="space-y-8">
-              <DistanceGuide />
-              <div className="flex justify-center">
+            <div>
+              <div className="px-8 py-10 bg-white">
+                <DistanceGuide />
+              </div>
+              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
                 <Button
                   onClick={startLetterTest}
-                  className="bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-full px-8 py-6 text-[17px] font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
                 >
-                  Continue <ArrowRight className="ml-2 h-5 w-5" />
+                  Continue <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
 
           {step === "test" && (
-            <div className="space-y-8">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <Volume2 className="h-5 w-5 text-[#86868b]" />
-                  <span className="text-[15px] text-[#86868b] font-medium">Read aloud</span>
+            <div>
+              <div className="px-8 py-10 bg-white space-y-8">
+                {/* Level Indicator */}
+                <div className="flex justify-between items-center">
+                  <div 
+                    style={{ backgroundColor: currentColor.bg }}
+                    className="flex items-center space-x-3 py-2 px-4 rounded-lg"
+                  >
+                    <span className="text-[14px] font-medium" style={{ color: currentColor.text }}>
+                      Level {currentSizeIndex + 1}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-[14px] font-medium text-[#2C2C2C]">
+                      Score: {results.correct}/{results.total}
+                      {results.total > 0 && (
+                        <span className="ml-2 text-[#666666]">
+                          ({Math.round((results.correct / results.total) * 100)}%)
+                        </span>
+                      )}
+                    </div>
+                    <div className={`flex items-center space-x-3 py-2 px-4 rounded-lg ${
+                      isListening ? 'bg-[#F3F0FF] text-[#6B2FFA]' : 'bg-[#F5F5F5] text-[#2C2C2C]'
+                    }`}>
+                      <Mic className="h-4 w-4" />
+                      <span className="text-[14px]">
+                        {isListening ? "Listening..." : "Click to speak"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Mic className={`h-5 w-5 ${isListening ? "text-red-500" : "text-[#86868b]"}`} />
-                  <span className="text-[15px] text-[#86868b] font-medium">
-                    {isListening ? "Listening..." : "Click to speak"}
-                  </span>
+
+                {/* Letters Display */}
+                <div 
+                  style={{ backgroundColor: currentColor.bg }}
+                  className="flex flex-col items-center justify-center min-h-[200px] rounded-lg"
+                >
+                  <p 
+                    style={{ 
+                      fontSize: `${SIZES[currentSizeIndex]}px`,
+                      color: currentColor.text
+                    }} 
+                    className="font-mono tracking-wide"
+                  >
+                    {currentString}
+                  </p>
                 </div>
-              </div>
 
-              <LetterDisplay letter={LETTERS[currentLetterIndex]} size={SIZES[currentSizeIndex]} />
-
-              <VoiceRecognition
-                onResult={handleVoiceResult}
-                isListening={isListening}
-                setIsListening={setIsListening}
-              />
-
-              {lastTranscript && (
-                <div className="bg-[#f5f5f7] rounded-xl p-4">
-                  <p className="text-[13px] text-[#86868b] font-medium">Last heard:</p>
-                  <p className="text-[15px] text-[#1d1d1f] font-medium mt-1">{lastTranscript}</p>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <Progress 
-                  value={progress} 
-                  className="h-1.5 bg-[#e5e5ea]" 
-                  indicatorClassName="bg-[#0071e3]"
+                {/* Voice Recognition */}
+                <VoiceRecognition
+                  onResult={handleVoiceResult}
+                  isListening={isListening}
+                  setIsListening={setIsListening}
                 />
-                <p className="text-[13px] text-center text-[#86868b] font-medium">
-                  {currentSizeIndex + 1} of {SIZES.length}
-                </p>
+
+                {/* Transcript */}
+                {lastTranscript && (
+                  <div className="bg-[#F5F5F5] rounded-lg p-4 space-y-2">
+                    <p className="text-[12px] text-[#666666] uppercase tracking-wider">Last heard</p>
+                    <p className="text-[14px] text-[#2C2C2C]">{lastTranscript}</p>
+                  </div>
+                )}
+
+                {/* Progress */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-[#666666]">Progress</span>
+                    <span className="text-[12px] font-medium" style={{ color: currentColor.text }}>
+                      Level {currentSizeIndex + 1} of {SIZES.length}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={progress} 
+                    className="h-1 bg-[#E6E6E6]"
+                    indicatorClassName="bg-[#6B2FFA]"
+                  />
+                </div>
               </div>
             </div>
           )}
 
           {step === "results" && (
-            <div className="space-y-8">
-              <div className="text-center space-y-4">
-                <p className="text-[48px] font-bold text-[#1d1d1f] tracking-tight">
-                  {Math.round((results.correct / results.total) * 100)}%
-                </p>
-                <p className="text-[17px] text-[#86868b] font-medium">
-                  You correctly identified {results.correct} out of {results.total} letters.
-                </p>
+            <div>
+              <div className="px-8 py-10 bg-white space-y-8">
+                <div className="flex items-center justify-center">
+                  <div className="w-32 h-32 rounded-full bg-[#F3F0FF] flex items-center justify-center">
+                    <p className="text-[40px] font-semibold text-[#6B2FFA]">
+                      {Math.round((results.correct / results.total) * 100)}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <p className="text-[15px] text-center text-[#666666]">
+                    You correctly identified {results.correct} out of {results.total} letter sets
+                  </p>
+
+                  <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
+                    <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
+                    <p className="text-[14px] text-[#666666] leading-relaxed">
+                      {results.correct / results.total >= 0.8
+                        ? "Your vision appears to be good. You were able to identify most letters correctly."
+                        : results.correct / results.total >= 0.6
+                          ? "Your vision may need some attention. Consider consulting with an eye care professional."
+                          : "Your vision test results suggest you should consult with an eye care professional for a comprehensive examination."}
+                    </p>
+                  </div>
+
+                  <div className="bg-[#FFF4E5] p-4 rounded-lg">
+                    <p className="text-[12px] text-[#B76E00] text-center">
+                      This is not a medical diagnosis. Please consult a healthcare professional for proper evaluation.
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="bg-[#f5f5f7] p-6 rounded-2xl space-y-3">
-                <h3 className="font-semibold text-[17px] text-[#1d1d1f]">Interpretation</h3>
-                <p className="text-[15px] text-[#86868b] leading-relaxed">
-                  {results.correct / results.total >= 0.8
-                    ? "Your vision appears to be good. You were able to identify most letters correctly."
-                    : results.correct / results.total >= 0.6
-                      ? "Your vision may need some attention. Consider consulting with an eye care professional."
-                      : "Your vision test results suggest you should consult with an eye care professional for a comprehensive examination."}
-                </p>
-              </div>
-
-              <div className="text-[13px] text-[#86868b] text-center font-medium italic">
-                This is not a medical diagnosis. Please consult a healthcare professional for proper evaluation.
-              </div>
-
-              <div className="flex justify-center">
+              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
                 <Button 
                   onClick={restartTest} 
-                  className="bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-full px-8 py-6 text-[17px] font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
                 >
                   Test Again
                 </Button>

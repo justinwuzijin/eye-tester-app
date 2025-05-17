@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Eye Tester App",
+  title: "4Sight - Vision Test",
   description: "Test your vision with voice recognition",
     generator: 'v0.dev'
 }
