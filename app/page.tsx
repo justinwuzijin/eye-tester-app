@@ -383,6 +383,12 @@ export default function Home() {
                     >
                       Try Peripheral Test →
                     </a>
+                    <a 
+                      href="/gaze-tester/index.html"
+                      className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                    >
+                      Try Gaze Test →
+                    </a>
                     <div className={`flex items-center space-x-3 py-2 px-4 rounded-lg ${
                       isListening ? 'bg-[#F3F0FF] text-[#6B2FFA]' : 'bg-[#F5F5F5] text-[#2C2C2C]'
                     }`}>

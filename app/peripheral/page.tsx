@@ -268,6 +268,12 @@ export default function PeripheralTest() {
                 >
                   Start Over
                 </button>
+                <a 
+                  href="/gaze-tester/index.html"
+                  className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                >
+                  Try Gaze Test →
+                </a>
               </div>
             )}
           </div>
