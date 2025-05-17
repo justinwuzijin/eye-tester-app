@@ -48,6 +48,39 @@ const LEVEL_COLORS = [
   { bg: '#FFF0F6', text: '#FA2FB7' }
 ]
 
+// Calculate Snellen ratio based on smallest readable size
+const calculateSnellenRatio = (sizeIndex: number) => {
+  // Standard Snellen ratios for our font sizes
+  // 48px -> 20/70
+  // 24px -> 20/40
+  // 12px -> 20/20
+  // 6px -> 20/15
+  // 3px -> 20/10
+  const baseRatio = 20
+  if (sizeIndex < INITIAL_SIZES.length) {
+    switch(sizeIndex) {
+      case 0: return "20/70"
+      case 1: return "20/40"
+      case 2: return "20/20"
+      default: return "20/70"
+    }
+  } else {
+    // For levels beyond initial sizes, calculate improved vision
+    const extraLevels = sizeIndex - INITIAL_SIZES.length + 1
+    const denominator = Math.max(20 / Math.pow(2, extraLevels), 10)
+    return `20/${Math.round(denominator)}`
+  }
+}
+
+// Get vision quality description
+const getVisionQuality = (sizeIndex: number) => {
+  if (sizeIndex >= INITIAL_SIZES.length + 2) return "Exceptional"
+  if (sizeIndex >= INITIAL_SIZES.length) return "Excellent"
+  if (sizeIndex >= 2) return "Normal"
+  if (sizeIndex >= 1) return "Mild Impairment"
+  return "Significant Impairment"
+}
+
 export default function Home() {
   const [step, setStep] = useState<"intro" | "distance" | "test" | "results">("intro")
   const [currentString, setCurrentString] = useState("")
@@ -57,6 +90,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0)
   const [lastTranscript, setLastTranscript] = useState<string>("")
   const [micPermissionGranted, setMicPermissionGranted] = useState(false)
+  const [failedAttempts, setFailedAttempts] = useState(0)  // Track consecutive failures
   const router = useRouter()
   const synth = useRef<SpeechSynthesis | null>(null)
   const defaultVoice = useRef<SpeechSynthesisVoice | null>(null)
@@ -167,7 +201,7 @@ export default function Home() {
     setResults({ correct: 0, total: 0 })
     setProgress(0)
     setLastTranscript("")
-    speakText(formatSpeech("Perfect! Read the letters out loud at your own pace. Let's start with the bigger ones."))
+    speakText(formatSpeech("Perfect! Read the letters out loud."))
   }
 
   const restartTest = () => {
@@ -187,35 +221,47 @@ export default function Home() {
     const isCorrect = normalizedTranscript.includes(currentString)
     setLastTranscript(transcript)
 
-    if (isCorrect) {
-      setResults((prev) => ({
-        correct: prev.correct + 1,
-        total: prev.total + 1,
-      }))
+    // Always update total attempts
+    setResults((prev) => ({
+      correct: isCorrect ? prev.correct + 1 : prev.correct,
+      total: prev.total + 1,
+    }))
 
+    if (isCorrect) {
+      setFailedAttempts(0)  // Reset failed attempts on success
+      
       // Continue to next level
       const nextSizeIndex = currentSizeIndex + 1
       setCurrentSizeIndex(nextSizeIndex)
       setCurrentString(generateRandomString(5))
       // Progress bar now shows progress through initial levels
       setProgress(Math.min((nextSizeIndex / INITIAL_SIZES.length) * 100, 100))
-      speakText(formatSpeech("Good job! Next row - take your time."))
+      speakText(formatSpeech("Good job! Next row."))
     } else {
-      setStep("results")
-      const score = Math.round((results.correct / results.total) * 100)
-      let resultMessage = ""
+      setFailedAttempts(prev => prev + 1)
       
-      if (currentSizeIndex >= INITIAL_SIZES.length) {
-        resultMessage = `Impressive! You made it past the standard test to level ${currentSizeIndex + 1}.`
-      } else if (currentSizeIndex >= 2) {
-        resultMessage = "Great results! Your vision looks strong."
-      } else if (currentSizeIndex >= 1) {
-        resultMessage = "Good effort! A quick check with an eye doctor might be helpful."
+      if (failedAttempts === 0) {
+        // First failure - give another try
+        setCurrentString(generateRandomString(5))  // New letters, same size
+        speakText(formatSpeech("Let's try one more time with this size."))
       } else {
-        resultMessage = "Thanks for completing the test. I recommend scheduling an eye exam for a thorough check."
+        // Second failure - end test
+        setStep("results")
+        let resultMessage = ""
+        
+        if (currentSizeIndex >= INITIAL_SIZES.length) {
+          resultMessage = `Impressive! You made it past the standard test to level ${currentSizeIndex + 1}.`
+        } else if (currentSizeIndex >= 2) {
+          resultMessage = "Great results! Your vision looks strong."
+        } else if (currentSizeIndex >= 1) {
+          resultMessage = "Good effort! A quick check with an eye doctor might be helpful."
+        } else {
+          resultMessage = "Thanks for completing the test. I recommend scheduling an eye exam for a thorough check."
+        }
+        
+        const finalScore = Math.round((results.correct / results.total) * 100)
+        speakText(formatSpeech(`Test complete! Your accuracy was ${finalScore}%. ${resultMessage}`))
       }
-      
-      speakText(formatSpeech(`Test complete! ${resultMessage}`))
     }
   }
 
@@ -406,30 +452,63 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-6">
-                  <p className="text-[15px] text-center text-[#666666]">
-                    You correctly identified {results.correct} out of {results.total} letter sets
-                  </p>
-
-                  <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
-                    <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
-                    <p className="text-[14px] text-[#666666] leading-relaxed">
-                      {results.correct / results.total >= 0.8
-                        ? "Your vision appears to be good. You were able to identify most letters correctly."
-                        : results.correct / results.total >= 0.6
-                          ? "Your vision may need some attention. Consider consulting with an eye care professional."
-                          : "Your vision test results suggest you should consult with an eye care professional for a comprehensive examination."}
+                  <div className="text-center space-y-2">
+                    <p className="text-[15px] text-[#666666]">
+                      You correctly identified {results.correct} out of {results.total} letter sets
+                    </p>
+                    <p className="text-[24px] font-semibold text-[#2C2C2C]">
+                      Vision Score: {calculateSnellenRatio(currentSizeIndex)}
+                    </p>
+                    <p className="text-[14px] text-[#666666]">
+                      Vision Quality: <span className="font-medium text-[#6B2FFA]">{getVisionQuality(currentSizeIndex)}</span>
                     </p>
                   </div>
 
-                  <div className="bg-[#FFF4E5] p-4 rounded-lg">
-                    <p className="text-[12px] text-[#B76E00] text-center">
-                      This is not a medical diagnosis. Please consult a healthcare professional for proper evaluation.
-                    </p>
+                  <div className="grid gap-4">
+                    <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
+                      <h3 className="text-[14px] font-medium text-[#2C2C2C]">Test Performance</h3>
+                      <div className="space-y-2">
+                        <p className="text-[14px] text-[#666666]">
+                          • Smallest text size read: {getSizeForLevel(currentSizeIndex)}px
+                        </p>
+                        <p className="text-[14px] text-[#666666]">
+                          • Completed levels: {currentSizeIndex + 1}
+                        </p>
+                        <p className="text-[14px] text-[#666666]">
+                          • Reading accuracy: {Math.round((results.correct / results.total) * 100)}%
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
+                      <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
+                      <p className="text-[14px] text-[#666666] leading-relaxed">
+                        {currentSizeIndex >= INITIAL_SIZES.length
+                          ? `Your vision appears to be above average. You successfully read text beyond the standard test size, achieving a ${calculateSnellenRatio(currentSizeIndex)} vision score.`
+                          : currentSizeIndex >= 2
+                            ? `Your vision appears to be within normal range. You achieved a standard ${calculateSnellenRatio(currentSizeIndex)} vision score.`
+                            : currentSizeIndex >= 1
+                              ? `Your vision may need attention. Your current vision score is ${calculateSnellenRatio(currentSizeIndex)}, which suggests mild visual impairment.`
+                              : `Your vision test results indicate a vision score of ${calculateSnellenRatio(currentSizeIndex)}. This suggests significant visual impairment that should be evaluated by an eye care professional.`}
+                      </p>
+                    </div>
+
+                    <div className="bg-[#FFF4E5] p-4 rounded-lg">
+                      <p className="text-[12px] text-[#B76E00] text-center">
+                        This is not a medical diagnosis. Results may vary based on device screen and testing conditions. Please consult an eye care professional for a comprehensive evaluation.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
+              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-between">
+                <Button 
+                  onClick={() => router.push('/peripheral')}
+                  className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                >
+                  Try Peripheral Test
+                </Button>
                 <Button 
                   onClick={restartTest} 
                   className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
