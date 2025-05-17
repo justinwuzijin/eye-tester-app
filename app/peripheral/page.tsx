@@ -54,30 +54,107 @@ export default function PeripheralTest() {
   const [micPermissionGranted, setMicPermissionGranted] = useState(false)
   const router = useRouter()
   const synth = useRef<SpeechSynthesis | null>(null)
+  const defaultVoice = useRef<SpeechSynthesisVoice | null>(null)
+  const hasSpokenIntro = useRef(false)
+  const defaultRate = useRef<number>(1.0)
+  const defaultPitch = useRef<number>(1.0)
+
+  // Load and set the voice
+  const loadVoices = () => {
+    const voices = synth.current?.getVoices() || []
+    console.log("Available voices:", voices.map(v => v.name))
+    
+    // Try to find Microsoft Aria Natural voice
+    const ariaVoice = voices.find(v => 
+      v.name.includes('Microsoft Aria Online (Natural)') ||  // Windows/Edge
+      v.name.includes('Microsoft Aria') // Fallback
+    )
+    
+    if (ariaVoice) {
+      defaultVoice.current = ariaVoice
+    } else {
+      // Fallback voices if Aria is not available
+      const fallbackVoices = [
+        "Google US English",
+        "Samantha",
+        "Google UK English Female",
+        "Microsoft Zira"
+      ]
+      
+      for (const fallbackVoice of fallbackVoices) {
+        const voice = voices.find(v => v.name.includes(fallbackVoice))
+        if (voice) {
+          defaultVoice.current = voice
+          break
+        }
+      }
+    }
+
+    // Speak intro after voices are loaded
+    if (!hasSpokenIntro.current) {
+      setTimeout(() => {
+        speakText(formatSpeech("Hi again! Dr. Sarah here. Let's check your peripheral vision, which helps us understand how well you can see things outside your direct line of sight. Click Start Test when you're ready."))
+        hasSpokenIntro.current = true
+      }, 1000)
+    }
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       synth.current = window.speechSynthesis
+      
+      // Chrome requires a callback for voice loading
+      if (synth.current?.addEventListener) {
+        synth.current.addEventListener('voiceschanged', loadVoices)
+      }
+      
+      // Initial load attempt
+      loadVoices()
     }
     return () => {
-      if (synth.current && synth.current.speaking) {
+      if (synth.current?.speaking) {
         synth.current.cancel()
+      }
+      if (synth.current?.removeEventListener) {
+        synth.current.removeEventListener('voiceschanged', loadVoices)
       }
     }
   }, [])
 
   const speakText = (text: string) => {
     if (synth.current) {
+      // Cancel any ongoing speech
+      if (synth.current.speaking) {
+        synth.current.cancel()
+      }
+      
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 0.9
-      utterance.pitch = 1
+      
+      // Use the selected default voice
+      if (defaultVoice.current) {
+        utterance.voice = defaultVoice.current
+      }
+      
+      // Natural voice settings
+      utterance.rate = 0.95   // Slightly slower for clearer speech
+      utterance.pitch = 1.0   // Natural pitch
+      utterance.volume = 0.95 // Comfortable listening level
+      
       synth.current.speak(utterance)
     }
   }
 
+  // Add natural pauses and emphasis to text
+  const formatSpeech = (text: string) => {
+    // Add commas for natural pauses
+    return text.replace(/([.!?]) /g, '$1, ')  // Add slight pauses after punctuation
+              .replace(/(\d+)/g, ' $1 ')      // Add spaces around numbers
+              .replace(/([,]) /g, '$1 ')      // Ensure spaces after commas
+  }
+
   const startTest = () => {
     setStep("distance")
-    speakText("Position your device at arm's length, about 40 centimeters from your eyes. Focus on the center dot. When ready, click continue.")
+    speakText("Hi again! Dr. Sarah here. Now we're going to check your peripheral vision - that's your ability to see things out of the corner of your eye. First, let's position your device just right, about arm's length away. I'll be asking you to focus on a dot in the center while spotting letters that appear around it. Don't worry, I'll guide you through every step!")
   }
 
   const startPeripheralTest = () => {
@@ -91,7 +168,7 @@ export default function PeripheralTest() {
     setProgress(0)
     setLastTranscript("")
     setTimeout(() => {
-      speakText("Level 1. Keep your eyes on the center dot and say the letter you see in your peripheral vision.")
+      speakText("Alright, let's begin! See that dot in the center? That's your focal point - just keep looking right at it. Letters will pop up around it, and all you need to do is tell me what letters you spot, just like we did before. Don't worry if you miss some - that's completely normal in this kind of test. Ready to give it a try?")
     }, 500)
   }
 
@@ -125,22 +202,22 @@ export default function PeripheralTest() {
         setCurrentLetter(generateRandomLetter())
         setCurrentPosition(generateRandomPosition())
         setProgress((nextLevel / (LEVEL_COLORS.length - 1)) * 100)
-        speakText(`Correct. Level ${nextLevel + 1}.`)
+        speakText(`That's it - you got it! You're doing a fantastic job keeping your eyes on the center dot. Let's try another letter. Remember, just keep looking at that center dot, and tell me what you see in your side vision.`)
       } else {
         setStep("results")
         const score = Math.round((results.correct / results.total) * 100)
         let resultMessage = ""
         
         if (score >= 80) {
-          resultMessage = "Your peripheral vision appears to be good. You were able to identify most letters correctly while maintaining central focus."
+          resultMessage = "I'm very impressed! Your peripheral vision seems to be working really well. You did an excellent job spotting those letters while keeping your focus on the center - that's exactly what we want to see!"
         } else if (score >= 60) {
-          resultMessage = "Your peripheral vision may need some attention. Consider consulting with an eye care professional."
+          resultMessage = "You did a good job with this test. While your peripheral vision is functioning, it might be worth having a friendly chat with an eye care colleague of mine, just to make sure everything's working as well as it could be."
         } else {
-          resultMessage = "Your peripheral vision test results suggest you should consult with an eye care professional for a comprehensive examination."
+          resultMessage = "Thank you for working through this test with me. I think it would be beneficial to have a comprehensive check-up with an eye care professional. They can do some more detailed tests to get a better picture of your peripheral vision."
         }
         
         setTimeout(() => {
-          speakText(`Test complete. Your score is ${score}%. ${resultMessage}`)
+          speakText(`Wonderful work! You've completed the peripheral vision screening. ${resultMessage} And remember, while I'm here to help screen your vision, this isn't a substitute for a full eye exam. Take care!`)
         }, 500)
       }
     } else {
@@ -148,7 +225,7 @@ export default function PeripheralTest() {
         ...prev,
         total: prev.total + 1,
       }))
-      speakText(`Incorrect. Please try again for level ${currentLevel + 1}.`)
+      speakText(`That's alright - peripheral vision can be quite challenging! Let's try another letter. Just keep your eyes on that center dot for me, and tell me what you see when you're ready. You're doing great with this!`)
     }
   }
 

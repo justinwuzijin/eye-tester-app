@@ -39,30 +39,107 @@ export default function Home() {
   const [micPermissionGranted, setMicPermissionGranted] = useState(false)
   const router = useRouter()
   const synth = useRef<SpeechSynthesis | null>(null)
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      synth.current = window.speechSynthesis
-    }
-    return () => {
-      if (synth.current && synth.current.speaking) {
-        synth.current.cancel()
-      }
-    }
-  }, [])
+  const defaultVoice = useRef<SpeechSynthesisVoice | null>(null)
+  const hasSpokenIntro = useRef(false)
+  const defaultRate = useRef<number>(1.0)
+  const defaultPitch = useRef<number>(1.0)
 
   const speakText = (text: string) => {
     if (synth.current) {
+      // Cancel any ongoing speech
+      if (synth.current.speaking) {
+        synth.current.cancel()
+      }
+      
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 0.9
-      utterance.pitch = 1
+      
+      // Use the selected default voice
+      if (defaultVoice.current) {
+        utterance.voice = defaultVoice.current
+      }
+      
+      // Natural voice settings
+      utterance.rate = 0.95   // Slightly slower for clearer speech
+      utterance.pitch = 1.0   // Natural pitch
+      utterance.volume = 0.95 // Comfortable listening level
+      
       synth.current.speak(utterance)
     }
   }
 
+  // Add natural pauses and emphasis to text
+  const formatSpeech = (text: string) => {
+    // Add commas for natural pauses
+    return text.replace(/([.!?]) /g, '$1, ')  // Add slight pauses after punctuation
+              .replace(/(\d+)/g, ' $1 ')      // Add spaces around numbers
+              .replace(/([,]) /g, '$1 ')      // Ensure spaces after commas
+  }
+
+  // Load and set the voice
+  const loadVoices = () => {
+    const voices = synth.current?.getVoices() || []
+    console.log("Available voices:", voices.map(v => v.name))
+    
+    // Try to find Microsoft Aria Natural voice
+    const ariaVoice = voices.find(v => 
+      v.name.includes('Microsoft Aria Online (Natural)') ||  // Windows/Edge
+      v.name.includes('Microsoft Aria') // Fallback
+    )
+    
+    if (ariaVoice) {
+      defaultVoice.current = ariaVoice
+    } else {
+      // Fallback voices if Aria is not available
+      const fallbackVoices = [
+        "Google US English",
+        "Samantha",
+        "Google UK English Female",
+        "Microsoft Zira"
+      ]
+      
+      for (const fallbackVoice of fallbackVoices) {
+        const voice = voices.find(v => v.name.includes(fallbackVoice))
+        if (voice) {
+          defaultVoice.current = voice
+          break
+        }
+      }
+    }
+
+    // Speak intro after voices are loaded
+    if (!hasSpokenIntro.current) {
+      setTimeout(() => {
+        speakText(formatSpeech("Hi! I'm Dr. Sarah, and I'll be helping you check your vision today. When you're ready to begin, just click the Start Test button."))
+        hasSpokenIntro.current = true
+      }, 1000)
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      synth.current = window.speechSynthesis
+      
+      // Chrome requires a callback for voice loading
+      if (synth.current?.addEventListener) {
+        synth.current.addEventListener('voiceschanged', loadVoices)
+      }
+      
+      // Initial load attempt
+      loadVoices()
+    }
+    return () => {
+      if (synth.current?.speaking) {
+        synth.current.cancel()
+      }
+      if (synth.current?.removeEventListener) {
+        synth.current.removeEventListener('voiceschanged', loadVoices)
+      }
+    }
+  }, [])
+
   const startTest = () => {
     setStep("distance")
-    speakText("Position your device at arm's length, about 40 centimeters from your eyes. When ready, click continue.")
+    speakText(formatSpeech("Perfect! First, let's get you positioned correctly. Hold your device at arm's length, about 40 centimeters from your eyes. Take your time to get comfortable, and when you're ready, we'll continue."))
   }
 
   const startLetterTest = () => {
@@ -73,7 +150,7 @@ export default function Home() {
     setProgress(0)
     setLastTranscript("")
     setTimeout(() => {
-      speakText("Level 1. Please read the letters aloud when you see them.")
+      speakText(formatSpeech("Great! Now, I'm going to show you some letters, starting with the larger ones. Just like in my office, read them out loud at your own pace. Don't worry if you need a moment to focus."))
     }, 500)
   }
 
@@ -105,17 +182,28 @@ export default function Home() {
         setCurrentSizeIndex(nextSizeIndex)
         setCurrentString(generateRandomString(5))
         setProgress((nextSizeIndex / (SIZES.length - 1)) * 100)
-        speakText(`Correct. Level ${nextSizeIndex + 1}.`)
+        speakText(formatSpeech("Well done! Let's try the next row. These letters might be a bit smaller, but take your time and read them whenever you're ready."))
       } else {
         setStep("results")
-        speakText("Test complete. View your results.")
+        const score = Math.round((results.correct / results.total) * 100)
+        let resultMessage = ""
+        
+        if (score >= 80) {
+          resultMessage = "I'm really pleased with your results! Your vision appears to be quite strong, and you did an excellent job with those letters."
+        } else if (score >= 60) {
+          resultMessage = "You did well with the test. While this is just a screening, it might be good to have a friendly chat with an eye care professional, just to make sure everything is working at its best."
+        } else {
+          resultMessage = "Thank you for completing this test. I recommend scheduling a check-up with an eye care professional. They'll be able to give you a much more thorough examination in their office."
+        }
+        
+        speakText(formatSpeech(`Excellent job completing the test! ${resultMessage} Remember, I'm just a screening tool, but I hope this has been helpful!`))
       }
     } else {
       setResults((prev) => ({
         ...prev,
         total: prev.total + 1,
       }))
-      speakText(`Incorrect. Please try again for level ${currentSizeIndex + 1}.`)
+      speakText(formatSpeech("That's alright, these letters can be tricky. Let's try this row again. Take your time, and read them whenever you feel ready."))
     }
   }
 
