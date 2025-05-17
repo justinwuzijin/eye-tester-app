@@ -61,32 +61,40 @@ export default function PeripheralTest() {
 
   // Load and set the voice
   const loadVoices = () => {
-    const voices = synth.current?.getVoices() || []
-    console.log("Available voices:", voices.map(v => v.name))
+    const voices = synth.current?.getVoices() || [];
+    console.log("Available voices:", voices.map(v => ({ name: v.name, lang: v.lang })));
     
-    // Try to find Microsoft Aria Natural voice
-    const ariaVoice = voices.find(v => 
-      v.name.includes('Microsoft Aria Online (Natural)') ||  // Windows/Edge
-      v.name.includes('Microsoft Aria') // Fallback
-    )
+    // Expanded list of preferred voices
+    const preferredVoices = [
+      // Premium natural voices
+      "Microsoft Aria Online (Natural)",  // Windows/Edge
+      "Microsoft Guy Online (Natural)",   // Windows/Edge
+      "Google UK English Male",           // Chrome
+      "Google UK English Female",         // Chrome
+      "Karen",                           // macOS
+      "Daniel",                          // macOS
+      "Moira",                           // macOS
+      "Samantha",                        // macOS/iOS
+      "Microsoft David",                 // Windows
+      "Microsoft Mark",                  // Windows
+      "Microsoft Zira",                  // Windows
+      // Fallback to any English voice if none of the above are found
+      "en-US",
+      "en-GB",
+      "en"
+    ];
     
-    if (ariaVoice) {
-      defaultVoice.current = ariaVoice
-    } else {
-      // Fallback voices if Aria is not available
-      const fallbackVoices = [
-        "Google US English",
-        "Samantha",
-        "Google UK English Female",
-        "Microsoft Zira"
-      ]
+    // Try to find the best available voice
+    for (const preferredVoice of preferredVoices) {
+      const voice = voices.find(v => 
+        v.name.includes(preferredVoice) || 
+        v.lang.startsWith(preferredVoice)
+      );
       
-      for (const fallbackVoice of fallbackVoices) {
-        const voice = voices.find(v => v.name.includes(fallbackVoice))
-        if (voice) {
-          defaultVoice.current = voice
-          break
-        }
+      if (voice) {
+        console.log("Selected voice:", voice.name);
+        defaultVoice.current = voice;
+        break;
       }
     }
 
@@ -94,10 +102,10 @@ export default function PeripheralTest() {
     if (!hasSpokenIntro.current) {
       setTimeout(() => {
         speakText(formatSpeech("Hi again! Dr. Sarah here. Let's check your peripheral vision, which helps us understand how well you can see things outside your direct line of sight. Click Start Test when you're ready."))
-        hasSpokenIntro.current = true
-      }, 1000)
+        hasSpokenIntro.current = true;
+      }, 1000);
     }
-  }
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -125,24 +133,24 @@ export default function PeripheralTest() {
     if (synth.current) {
       // Cancel any ongoing speech
       if (synth.current.speaking) {
-        synth.current.cancel()
+        synth.current.cancel();
       }
       
-      const utterance = new SpeechSynthesisUtterance(text)
+      const utterance = new SpeechSynthesisUtterance(text);
       
       // Use the selected default voice
       if (defaultVoice.current) {
-        utterance.voice = defaultVoice.current
+        utterance.voice = defaultVoice.current;
       }
       
-      // Natural voice settings
-      utterance.rate = 0.95   // Slightly slower for clearer speech
-      utterance.pitch = 1.0   // Natural pitch
-      utterance.volume = 0.95 // Comfortable listening level
+      // Faster voice settings
+      utterance.rate = 1.25;    // Increased speed (25% faster)
+      utterance.pitch = 1.0;    // Natural pitch
+      utterance.volume = 0.95;  // Comfortable listening level
       
-      synth.current.speak(utterance)
+      synth.current.speak(utterance);
     }
-  }
+  };
 
   // Add natural pauses and emphasis to text
   const formatSpeech = (text: string) => {

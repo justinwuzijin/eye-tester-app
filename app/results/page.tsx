@@ -1,14 +1,79 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { Volume2 } from 'lucide-react';
 
 export default function ResultsPage() {
   const [snellenScore, setSnellenScore] = useState('20/20');
   const [peripheralAccuracy, setPeripheralAccuracy] = useState('100%');
   const router = useRouter();
+  const synth = useRef<SpeechSynthesis | null>(null);
+  const defaultVoice = useRef<SpeechSynthesisVoice | null>(null);
+  const hasSpokenIntro = useRef(false);
+
+  // Load and set the voice
+  const loadVoices = () => {
+    const voices = synth.current?.getVoices() || [];
+    console.log("Available voices:", voices.map(v => ({ name: v.name, lang: v.lang })));
+    
+    // Expanded list of preferred voices
+    const preferredVoices = [
+      // Premium natural voices
+      "Microsoft Aria Online (Natural)",  // Windows/Edge
+      "Microsoft Guy Online (Natural)",   // Windows/Edge
+      "Google UK English Male",           // Chrome
+      "Google UK English Female",         // Chrome
+      "Karen",                           // macOS
+      "Daniel",                          // macOS
+      "Moira",                           // macOS
+      "Samantha",                        // macOS/iOS
+      "Microsoft David",                 // Windows
+      "Microsoft Mark",                  // Windows
+      "Microsoft Zira",                  // Windows
+      // Fallback to any English voice if none of the above are found
+      "en-US",
+      "en-GB",
+      "en"
+    ];
+    
+    // Try to find the best available voice
+    for (const preferredVoice of preferredVoices) {
+      const voice = voices.find(v => 
+        v.name.includes(preferredVoice) || 
+        v.lang.startsWith(preferredVoice)
+      );
+      
+      if (voice) {
+        console.log("Selected voice:", voice.name);
+        defaultVoice.current = voice;
+        break;
+      }
+    }
+
+    // Speak intro after voices are loaded
+    if (!hasSpokenIntro.current) {
+      setTimeout(() => {
+        speakText(formatSpeech("Welcome to your detailed vision analysis! I'll walk you through your test results and what they mean for your eye health."));
+        hasSpokenIntro.current = true;
+      }, 1000);
+    }
+  };
 
   useEffect(() => {
+    // Initialize speech synthesis
+    if (typeof window !== "undefined") {
+      synth.current = window.speechSynthesis;
+      
+      // Chrome requires a callback for voice loading
+      if (synth.current?.addEventListener) {
+        synth.current.addEventListener('voiceschanged', loadVoices);
+      }
+      
+      // Initial load attempt
+      loadVoices();
+    }
+
     // Get results from localStorage
     const storedSnellenScore = localStorage.getItem('snellenScore');
     const storedPeripheralAccuracy = localStorage.getItem('peripheralAccuracy');
@@ -19,7 +84,65 @@ export default function ResultsPage() {
     if (storedPeripheralAccuracy) {
       setPeripheralAccuracy(storedPeripheralAccuracy);
     }
+
+    return () => {
+      if (synth.current?.speaking) {
+        synth.current.cancel();
+      }
+      if (synth.current?.removeEventListener) {
+        synth.current.removeEventListener('voiceschanged', loadVoices);
+      }
+    };
   }, []);
+
+  // Add natural pauses and emphasis to text
+  const formatSpeech = (text: string) => {
+    return text.replace(/([.!?]) /g, '$1, ')  // Add slight pauses after punctuation
+              .replace(/(\d+)/g, ' $1 ')      // Add spaces around numbers
+              .replace(/([,]) /g, '$1 ')      // Ensure spaces after commas
+  };
+
+  const speakText = (text: string) => {
+    if (synth.current) {
+      // Cancel any ongoing speech
+      if (synth.current.speaking) {
+        synth.current.cancel();
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Use the selected default voice
+      if (defaultVoice.current) {
+        utterance.voice = defaultVoice.current;
+      }
+      
+      // Faster voice settings
+      utterance.rate = 1.25;    // Increased speed (25% faster)
+      utterance.pitch = 1.0;    // Natural pitch
+      utterance.volume = 0.95;  // Comfortable listening level
+      
+      synth.current.speak(utterance);
+    }
+  };
+
+  const speakResults = () => {
+    const snellenMessage = `Your Snellen test score is ${snellenScore}, `;
+    const peripheralMessage = `and your peripheral vision accuracy is ${peripheralAccuracy}. `;
+    
+    let recommendationMessage = "";
+    const snellenNum = parseInt(snellenScore.split('/')[1]);
+    const peripheralNum = parseInt(peripheralAccuracy);
+    
+    if (snellenNum <= 20 && peripheralNum >= 80) {
+      recommendationMessage = "Your vision appears to be in good health! Keep up with regular eye check-ups to maintain your eye health.";
+    } else if (snellenNum <= 40 && peripheralNum >= 60) {
+      recommendationMessage = "Your vision might benefit from some attention. Consider scheduling a check-up with an eye care professional.";
+    } else {
+      recommendationMessage = "I recommend scheduling a comprehensive eye examination to better understand and address your vision needs.";
+    }
+
+    speakText(formatSpeech(`${snellenMessage}${peripheralMessage}${recommendationMessage}`));
+  };
 
   return (
     <div className="container min-h-screen bg-gradient-to-b from-white to-[#FAFAFA] dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
@@ -61,7 +184,17 @@ export default function ResultsPage() {
 
       <section id="test-results" className="max-w-2xl mx-auto mb-12 px-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
-          <h2 className="text-xl font-medium mb-6">Test Results Summary</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-medium">Test Results Summary</h2>
+            <button
+              onClick={speakResults}
+              className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
+              aria-label="Read results aloud"
+            >
+              <Volume2 className="h-4 w-4" />
+              <span>Read Results</span>
+            </button>
+          </div>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6 text-center">
               <h3 className="text-sm font-medium mb-4">Snellen Test Results</h3>
