@@ -81,13 +81,13 @@ export default function PeripheralTest() {
   }
 
   const startPeripheralTest = () => {
+    setResults({ correct: 0, total: 0 })
     setStep("test")
     const newLetter = generateRandomLetter()
     const newPosition = generateRandomPosition()
     setCurrentLetter(newLetter)
     setCurrentPosition(newPosition)
     setCurrentLevel(0)
-    setResults({ correct: 0, total: 0 })
     setProgress(0)
     setLastTranscript("")
     setTimeout(() => {
@@ -128,7 +128,20 @@ export default function PeripheralTest() {
         speakText(`Correct. Level ${nextLevel + 1}.`)
       } else {
         setStep("results")
-        speakText("Test complete. View your results.")
+        const score = Math.round((results.correct / results.total) * 100)
+        let resultMessage = ""
+        
+        if (score >= 80) {
+          resultMessage = "Your peripheral vision appears to be good. You were able to identify most letters correctly while maintaining central focus."
+        } else if (score >= 60) {
+          resultMessage = "Your peripheral vision may need some attention. Consider consulting with an eye care professional."
+        } else {
+          resultMessage = "Your peripheral vision test results suggest you should consult with an eye care professional for a comprehensive examination."
+        }
+        
+        setTimeout(() => {
+          speakText(`Test complete. Your score is ${score}%. ${resultMessage}`)
+        }, 500)
       }
     } else {
       setResults((prev) => ({
@@ -159,6 +172,13 @@ export default function PeripheralTest() {
                 >
                   ← Back to Snellen Test
                 </a>
+                <button 
+                  onClick={() => setStep("results")}
+                  className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                  aria-label="View latest test results"
+                >
+                  View Results
+                </button>
                 <button 
                   onClick={restartTest}
                   className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] transition-colors"
@@ -331,7 +351,12 @@ export default function PeripheralTest() {
               <div>
                 <div className="px-8 py-10 bg-white space-y-8">
                   <div className="flex items-center justify-center">
-                    <div className="w-32 h-32 rounded-full bg-[#F3F0FF] flex items-center justify-center">
+                    <div 
+                      className="w-32 h-32 rounded-full bg-[#F3F0FF] flex items-center justify-center"
+                      role="region"
+                      aria-label="Test Score"
+                      tabIndex={0}
+                    >
                       <p className="text-[40px] font-semibold text-[#6B2FFA]">
                         {Math.round((results.correct / results.total) * 100)}%
                       </p>
@@ -339,11 +364,20 @@ export default function PeripheralTest() {
                   </div>
 
                   <div className="space-y-6">
-                    <p className="text-[15px] text-center text-[#666666]">
+                    <p 
+                      className="text-[15px] text-center text-[#666666]"
+                      role="status"
+                      aria-live="polite"
+                    >
                       You correctly identified {results.correct} out of {results.total} peripheral letters
                     </p>
 
-                    <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
+                    <div 
+                      className="bg-[#F3F0FF] p-6 rounded-lg space-y-3"
+                      role="region"
+                      aria-label="Test Interpretation"
+                      tabIndex={0}
+                    >
                       <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
                       <p className="text-[14px] text-[#666666] leading-relaxed">
                         {results.correct / results.total >= 0.8
@@ -354,10 +388,66 @@ export default function PeripheralTest() {
                       </p>
                     </div>
 
-                    <div className="bg-[#FFF4E5] p-4 rounded-lg">
+                    <div 
+                      className="bg-[#FFF4E5] p-4 rounded-lg"
+                      role="alert"
+                      aria-live="polite"
+                    >
                       <p className="text-[12px] text-[#B76E00] text-center">
                         This is not a medical diagnosis. Please consult a healthcare professional for proper evaluation.
                       </p>
+                    </div>
+
+                    <div className="flex items-center justify-center space-x-4 mt-6">
+                      <button
+                        onClick={() => {
+                          const score = Math.round((results.correct / results.total) * 100)
+                          let resultMessage = ""
+                          
+                          if (score >= 80) {
+                            resultMessage = "Your peripheral vision appears to be good. You were able to identify most letters correctly while maintaining central focus."
+                          } else if (score >= 60) {
+                            resultMessage = "Your peripheral vision may need some attention. Consider consulting with an eye care professional."
+                          } else {
+                            resultMessage = "Your peripheral vision test results suggest you should consult with an eye care professional for a comprehensive examination."
+                          }
+                          
+                          speakText(`Your score is ${score}%. ${resultMessage}`)
+                        }}
+                        className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                        aria-label="Read results aloud"
+                      >
+                        <Volume2 className="h-4 w-4" />
+                        <span>Read Results</span>
+                      </button>
+                    </div>
+
+                    <div className="mt-8 pt-8 border-t border-[#E6E6E6]">
+                      <div className="text-center">
+                        <h3 className="text-[16px] font-medium text-[#2C2C2C] mb-2">
+                          View Detailed Analysis
+                        </h3>
+                        <p className="text-[14px] text-[#666666] mb-4">
+                          See a comprehensive breakdown of your vision test results
+                        </p>
+                        <a
+                          href="/results.html"
+                          className="inline-flex items-center justify-center space-x-2 bg-[#F3F0FF] text-[#6B2FFA] hover:bg-[#E6E0FF] px-6 py-3 rounded-lg transition-colors"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Open detailed vision test analysis in a new tab"
+                          onClick={(e) => {
+                            // Ensure the CSS file is loaded
+                            const link = document.createElement('link')
+                            link.rel = 'stylesheet'
+                            link.href = '/results.css'
+                            document.head.appendChild(link)
+                          }}
+                        >
+                          <span className="text-[14px] font-medium">View Detailed Results</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -366,12 +456,14 @@ export default function PeripheralTest() {
                   <Button 
                     onClick={() => router.push('/')}
                     className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                    aria-label="Return to Snellen Test"
                   >
                     Back to Snellen Test
                   </Button>
                   <Button 
                     onClick={restartTest} 
                     className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                    aria-label="Start a new peripheral vision test"
                   >
                     Test Again
                   </Button>
