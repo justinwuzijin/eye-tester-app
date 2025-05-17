@@ -155,33 +155,33 @@ export default function PeripheralTest() {
   const currentColor = LEVEL_COLORS[currentLevel]
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA]">
+    <main className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA] dark:from-gray-900 dark:to-gray-800">
       <div className="w-screen px-0 py-16">
         {/* Header */}
         <div className="max-w-2xl mx-auto px-6 mb-12">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 rounded-sm bg-[#6B2FFA]"></div>
-              <h2 className="text-[15px] font-medium text-[#2C2C2C]">4Sight</h2>
+              <h2 className="text-[15px] font-medium text-[#2C2C2C] dark:text-gray-200">4Sight</h2>
             </div>
             {step !== "intro" && (
               <div className="flex items-center space-x-4">
                 <a 
                   href="/"
-                  className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                  className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
                 >
                   ← Back to Snellen Test
                 </a>
                 <button 
                   onClick={() => setStep("results")}
-                  className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                  className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
                   aria-label="View latest test results"
                 >
                   View Results
                 </button>
                 <button 
                   onClick={restartTest}
-                  className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] transition-colors"
+                  className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] dark:text-gray-200 dark:hover:text-purple-300 transition-colors"
                 >
                   Start Over
                 </button>
@@ -192,13 +192,13 @@ export default function PeripheralTest() {
 
         {/* Title Section */}
         <div className="max-w-2xl mx-auto px-6 space-y-4 mb-8">
-          <h1 className="text-[32px] font-semibold text-[#2C2C2C] tracking-tight">
+          <h1 className="text-[32px] font-semibold text-[#2C2C2C] dark:text-gray-200 tracking-tight">
             {step === "intro" && "Peripheral Vision Test"}
             {step === "distance" && "Position Device"}
             {step === "test" && "Peripheral Test"}
             {step === "results" && "Results"}
           </h1>
-          <p className="text-[15px] text-[#666666] leading-relaxed">
+          <p className="text-[15px] text-[#666666] dark:text-gray-400 leading-relaxed">
             {step === "intro" && "Test your peripheral vision by identifying letters while focusing on a central point"}
             {step === "distance" && "Ensure proper distance for accurate results"}
             {step === "test" && "Keep your eyes on the center dot and identify the letter"}
@@ -211,13 +211,13 @@ export default function PeripheralTest() {
           <Card className="overflow-hidden border-0 shadow-lg rounded-xl">
             {step === "intro" && (
               <div>
-                <div className="px-8 py-10 bg-white">
+                <div className="px-8 py-10 bg-white dark:bg-gray-800">
                   <div className="space-y-6">
                     <div className="space-y-4">
-                      <p className="text-[15px] text-[#2C2C2C] leading-relaxed">
+                      <p className="text-[15px] text-[#2C2C2C] dark:text-gray-200 leading-relaxed">
                         This test will assess your peripheral vision. Focus on the center dot while identifying letters that appear in different positions.
                       </p>
-                      <p className="text-[14px] text-[#666666] leading-relaxed">
+                      <p className="text-[14px] text-[#666666] dark:text-gray-400 leading-relaxed">
                         Speak clearly when you see each letter. Keep your eyes fixed on the center.
                       </p>
                     </div>
@@ -225,7 +225,7 @@ export default function PeripheralTest() {
                     <MicrophoneSetup onPermissionGranted={() => setMicPermissionGranted(true)} />
                   </div>
                 </div>
-                <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
+                <div className="px-8 py-6 bg-[#F5F5F5] dark:bg-gray-700 flex justify-end">
                   <Button 
                     onClick={startTest}
                     disabled={!micPermissionGranted}
@@ -256,92 +256,34 @@ export default function PeripheralTest() {
             )}
 
             {step === "test" && (
-              <div>
-                <div className="px-8 py-10 bg-white space-y-8">
-                  {/* Level Indicator */}
-                  <div className="max-w-2xl mx-auto flex justify-between items-center">
-                    <div 
-                      style={{ backgroundColor: currentColor.bg }}
-                      className="flex items-center space-x-3 py-2 px-4 rounded-lg"
-                    >
-                      <span className="text-[14px] font-medium" style={{ color: currentColor.text }}>
-                        Level {currentLevel + 1}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-[14px] font-medium text-[#2C2C2C]">
-                        Score: {results.correct}/{results.total}
-                        {results.total > 0 && (
-                          <span className="ml-2 text-[#666666]">
-                            ({Math.round((results.correct / results.total) * 100)}%)
-                          </span>
-                        )}
-                      </div>
-                      <div className={`flex items-center space-x-3 py-2 px-4 rounded-lg ${
-                        isListening ? 'bg-[#F3F0FF] text-[#6B2FFA]' : 'bg-[#F5F5F5] text-[#2C2C2C]'
-                      }`}>
-                        <Mic className="h-4 w-4" />
-                        <span className="text-[14px]">
-                          {isListening ? "Listening..." : "Click to speak"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Test Display */}
+              <div className="relative w-screen h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+                {/* Center dot */}
+                <div 
+                  className="absolute w-4 h-4 rounded-full bg-[#6B2FFA] dark:bg-purple-300"
+                  style={{ left: 'calc(50% - 8px)', top: 'calc(50% - 8px)' }}
+                ></div>
+                
+                {/* Peripheral letter */}
+                {currentLetter && currentPosition && (
                   <div 
-                    style={{ backgroundColor: currentColor.bg }}
-                    className="relative flex items-center justify-center w-screen h-[70vh] rounded-none"
+                    className="absolute text-4xl font-bold text-[#2C2C2C] dark:text-gray-200"
+                    style={{
+                      left: `${currentPosition.x}px`,
+                      top: `${currentPosition.y}px`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
                   >
-                    {/* Center Dot */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black" />
-                    
-                    {/* Peripheral Letter */}
-                    <div 
-                      style={{ 
-                        position: 'absolute',
-                        ...currentPosition,
-                        color: currentColor.text,
-                        fontSize: '48px',
-                        fontFamily: 'monospace',
-                        fontWeight: '600'
-                      }}
-                    >
-                      {currentLetter}
-                    </div>
+                    {currentLetter}
                   </div>
+                )}
 
-                  {/* Voice Recognition and Progress Section */}
-                  <div className="max-w-2xl mx-auto">
-                    {/* Voice Recognition */}
-                    <VoiceRecognition
-                      onResult={handleVoiceResult}
-                      isListening={isListening}
-                      setIsListening={setIsListening}
-                    />
-
-                    {/* Transcript */}
-                    {lastTranscript && (
-                      <div className="bg-[#F5F5F5] rounded-lg p-4 space-y-2 mt-8">
-                        <p className="text-[12px] text-[#666666] uppercase tracking-wider">Last heard</p>
-                        <p className="text-[14px] text-[#2C2C2C]">{lastTranscript}</p>
-                      </div>
-                    )}
-
-                    {/* Progress */}
-                    <div className="space-y-3 mt-8">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[12px] text-[#666666]">Progress</span>
-                        <span className="text-[12px] font-medium" style={{ color: currentColor.text }}>
-                          Level {currentLevel + 1} of {LEVEL_COLORS.length}
-                        </span>
-                      </div>
-                      <Progress 
-                        value={progress} 
-                        className="h-1 bg-[#E6E6E6]"
-                        indicatorClassName="bg-[#6B2FFA]"
-                      />
-                    </div>
+                {/* Progress bar */}
+                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-64">
+                  <div className="h-2 bg-[#F3F0FF] dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#6B2FFA] dark:bg-purple-300 transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -349,37 +291,32 @@ export default function PeripheralTest() {
 
             {step === "results" && (
               <div>
-                <div className="px-8 py-10 bg-white space-y-8">
-                  <div className="flex items-center justify-center">
-                    <div 
-                      className="w-32 h-32 rounded-full bg-[#F3F0FF] flex items-center justify-center"
-                      role="region"
-                      aria-label="Test Score"
-                      tabIndex={0}
-                    >
-                      <p className="text-[40px] font-semibold text-[#6B2FFA]">
-                        {Math.round((results.correct / results.total) * 100)}%
-                      </p>
+                <div className="px-8 py-10 bg-white dark:bg-gray-800">
+                  <div className="space-y-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-[16px] font-medium text-[#2C2C2C] dark:text-gray-200 mb-1">
+                            Your Score
+                          </h3>
+                          <p className="text-[14px] text-[#666666] dark:text-gray-400">
+                            Based on letter identification accuracy
+                          </p>
+                        </div>
+                        <div className="text-[32px] font-semibold text-[#6B2FFA] dark:text-purple-300">
+                          {Math.round((results.correct / results.total) * 100)}%
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <p 
-                      className="text-[15px] text-center text-[#666666]"
-                      role="status"
-                      aria-live="polite"
-                    >
-                      You correctly identified {results.correct} out of {results.total} peripheral letters
-                    </p>
 
                     <div 
-                      className="bg-[#F3F0FF] p-6 rounded-lg space-y-3"
+                      className="bg-[#F3F0FF] dark:bg-gray-700 p-6 rounded-lg space-y-3"
                       role="region"
                       aria-label="Test Interpretation"
                       tabIndex={0}
                     >
-                      <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
-                      <p className="text-[14px] text-[#666666] leading-relaxed">
+                      <h3 className="text-[14px] font-medium text-[#2C2C2C] dark:text-gray-200">Interpretation</h3>
+                      <p className="text-[14px] text-[#666666] dark:text-gray-400 leading-relaxed">
                         {results.correct / results.total >= 0.8
                           ? "Your peripheral vision appears to be good. You were able to identify most letters correctly while maintaining central focus."
                           : results.correct / results.total >= 0.6
@@ -389,11 +326,11 @@ export default function PeripheralTest() {
                     </div>
 
                     <div 
-                      className="bg-[#FFF4E5] p-4 rounded-lg"
+                      className="bg-[#FFF4E5] dark:bg-yellow-900 p-4 rounded-lg"
                       role="alert"
                       aria-live="polite"
                     >
-                      <p className="text-[12px] text-[#B76E00] text-center">
+                      <p className="text-[12px] text-[#B76E00] dark:text-yellow-200 text-center">
                         This is not a medical diagnosis. Please consult a healthcare professional for proper evaluation.
                       </p>
                     </div>
@@ -414,7 +351,7 @@ export default function PeripheralTest() {
                           
                           speakText(`Your score is ${score}%. ${resultMessage}`)
                         }}
-                        className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                        className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
                         aria-label="Read results aloud"
                       >
                         <Volume2 className="h-4 w-4" />
@@ -422,26 +359,24 @@ export default function PeripheralTest() {
                       </button>
                     </div>
 
-                    <div className="mt-8 pt-8 border-t border-[#E6E6E6]">
+                    <div className="mt-8 pt-8 border-t border-[#E6E6E6] dark:border-gray-600">
                       <div className="text-center">
-                        <h3 className="text-[16px] font-medium text-[#2C2C2C] mb-2">
+                        <h3 className="text-[16px] font-medium text-[#2C2C2C] dark:text-gray-200 mb-2">
                           View Detailed Analysis
                         </h3>
-                        <p className="text-[14px] text-[#666666] mb-4">
+                        <p className="text-[14px] text-[#666666] dark:text-gray-400 mb-4">
                           See a comprehensive breakdown of your vision test results
                         </p>
                         <a
-                          href="/results.html"
-                          className="inline-flex items-center justify-center space-x-2 bg-[#F3F0FF] text-[#6B2FFA] hover:bg-[#E6E0FF] px-6 py-3 rounded-lg transition-colors"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label="Open detailed vision test analysis in a new tab"
+                          href="/results"
+                          className="inline-flex items-center justify-center space-x-2 bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 hover:bg-[#E6E0FF] dark:hover:bg-gray-600 px-6 py-3 rounded-lg transition-colors"
                           onClick={(e) => {
-                            // Ensure the CSS file is loaded
-                            const link = document.createElement('link')
-                            link.rel = 'stylesheet'
-                            link.href = '/results.css'
-                            document.head.appendChild(link)
+                            e.preventDefault();
+                            // Store results in localStorage
+                            const score = Math.round((results.correct / results.total) * 100);
+                            localStorage.setItem('peripheralAccuracy', `${score}%`);
+                            // Navigate to results page
+                            router.push('/results');
                           }}
                         >
                           <span className="text-[14px] font-medium">View Detailed Results</span>
@@ -452,10 +387,10 @@ export default function PeripheralTest() {
                   </div>
                 </div>
 
-                <div className="px-8 py-6 bg-[#F5F5F5] flex justify-between">
+                <div className="px-8 py-6 bg-[#F5F5F5] dark:bg-gray-700 flex justify-between">
                   <Button 
                     onClick={() => router.push('/')}
-                    className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                    className="bg-white dark:bg-gray-800 border border-[#6B2FFA] dark:border-purple-300 text-[#6B2FFA] dark:text-purple-300 hover:bg-[#F3F0FF] dark:hover:bg-gray-700 rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
                     aria-label="Return to Snellen Test"
                   >
                     Back to Snellen Test

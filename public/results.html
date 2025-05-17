@@ -3,27 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vision Test Results</title>
+    <title>4Sight - Detailed Vision Test Results</title>
     <link rel="stylesheet" href="results.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Your Vision Test Results</h1>
+            <div class="logo">
+                <div class="logo-dot"></div>
+                <span class="logo-text">4Sight</span>
+            </div>
+            <h1>Detailed Vision Analysis</h1>
+            <p class="subtitle">A comprehensive breakdown of your vision test results and recommendations</p>
             <nav>
-                <button onclick="scrollToSection('test-results')">Test Results</button>
-                <button onclick="scrollToSection('treatments')">Treatment Options</button>
+                <button onclick="scrollToSection('test-results')" aria-label="View test results">Test Results</button>
+                <button onclick="scrollToSection('treatments')" aria-label="View treatment options">Treatment Options</button>
             </nav>
         </header>
 
         <section id="test-results" class="results-section">
             <h2>Test Results Summary</h2>
             <div class="results-grid">
-                <div class="result-card snellen-results">
+                <div class="result-card" role="region" aria-label="Snellen test results">
                     <h3>Snellen Test Results</h3>
                     <div id="snellen-score"></div>
                 </div>
-                <div class="result-card peripheral-results">
+                <div class="result-card" role="region" aria-label="Peripheral vision test results">
                     <h3>Peripheral Vision Results</h3>
                     <div id="peripheral-score"></div>
                 </div>
@@ -32,7 +37,7 @@
 
         <section id="treatments" class="treatments-section">
             <h2>Recommended Treatments</h2>
-            <div class="treatments-grid" id="treatments-container">
+            <div class="treatments-grid" id="treatments-container" role="list">
                 <!-- Treatment cards will be dynamically inserted here -->
             </div>
         </section>
@@ -87,11 +92,13 @@
         // Function to create treatment cards
         function createTreatmentCards() {
             const container = document.getElementById('treatments-container');
-            treatments.forEach(treatment => {
+            treatments.forEach((treatment, index) => {
                 const card = document.createElement('div');
                 card.className = 'treatment-card';
+                card.setAttribute('role', 'listitem');
+                card.style.setProperty('--i', index + 1);
                 card.innerHTML = `
-                    <div class="treatment-icon">${treatment.icon}</div>
+                    <div class="treatment-icon" aria-hidden="true">${treatment.icon}</div>
                     <h3>${treatment.name}</h3>
                     <p class="treatment-info">${treatment.info}</p>
                     <p class="treatment-cost">Cost: ${treatment.cost}</p>
