@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision Test Results</title>
+    <link rel="stylesheet" href="results.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Your Vision Test Results</h1>
+            <nav>
+                <button onclick="scrollToSection('test-results')">Test Results</button>
+                <button onclick="scrollToSection('treatments')">Treatment Options</button>
+            </nav>
+        </header>
+
+        <section id="test-results" class="results-section">
+            <h2>Test Results Summary</h2>
+            <div class="results-grid">
+                <div class="result-card snellen-results">
+                    <h3>Snellen Test Results</h3>
+                    <div id="snellen-score"></div>
+                </div>
+                <div class="result-card peripheral-results">
+                    <h3>Peripheral Vision Results</h3>
+                    <div id="peripheral-score"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="treatments" class="treatments-section">
+            <h2>Recommended Treatments</h2>
+            <div class="treatments-grid" id="treatments-container">
+                <!-- Treatment cards will be dynamically inserted here -->
+            </div>
+        </section>
+    </div>
+    <script>
+        // Treatment options data
+        const treatments = [
+            {
+                name: "Glasses",
+                info: "Prescription lenses that correct refractive errors such as myopia (nearsightedness), hyperopia (farsightedness), and astigmatism. Glasses are non-invasive, easy to use, and widely available.",
+                cost: "$200 - $350",
+                icon: "👓"
+            },
+            {
+                name: "Night Contact Lenses (Orthokeratology)",
+                info: "Rigid gas-permeable contact lenses that temporarily reshapes the cornea. Can improve vision during the day without lenses or glasses and may slow the progression of childhood myopia. Requires regular use and follow-up.",
+                cost: "$1,000 - $4,000",
+                icon: "🌙"
+            },
+            {
+                name: "Contact Lenses",
+                info: "Soft or rigid lenses worn directly on the eye to correct vision. Offers a wider field of view than glasses and can be used for sports or cosmetic reasons. Requires hygiene and daily care.",
+                cost: "$1000",
+                icon: "👁️"
+            },
+            {
+                name: "Better eye practices (20-20-20 rule)",
+                info: "Take a 20-second break every 20 minutes and look at something 20 feet away. This helps reduce eye strain and may prevent vision deterioration.",
+                cost: "$0",
+                icon: "⏲️"
+            },
+            {
+                name: "LASIK Eye Surgery",
+                info: "Corrects hyperopia and myopia. A laser surgical procedure that permanently reshapes the cornea to correct refractive errors like myopia, hyperopia, and astigmatism. Quick recovery time, but not suitable for everyone.",
+                cost: "$1500 to $3500 per eye",
+                icon: "⚡"
+            },
+            {
+                name: "Atropine",
+                info: "May prevent myopia development in children. Typically used under supervision of an optometrist or ophthalmologist. Not suitable for everyone, especially those with eye conditions like closed-angle glaucoma.",
+                cost: "5mL bottle is $50 to $100",
+                icon: "💧"
+            },
+            {
+                name: "Nothing (20/20 vision)",
+                info: "Congrats! You have 20/20 vision.",
+                cost: "$0",
+                icon: "🎉"
+            }
+        ];
+
+        // Function to create treatment cards
+        function createTreatmentCards() {
+            const container = document.getElementById('treatments-container');
+            treatments.forEach(treatment => {
+                const card = document.createElement('div');
+                card.className = 'treatment-card';
+                card.innerHTML = `
+                    <div class="treatment-icon">${treatment.icon}</div>
+                    <h3>${treatment.name}</h3>
+                    <p class="treatment-info">${treatment.info}</p>
+                    <p class="treatment-cost">Cost: ${treatment.cost}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Function to scroll to section
+        function scrollToSection(sectionId) {
+            document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Function to display test results
+        function displayResults() {
+            // Get results from localStorage or URL parameters
+            const snellenScore = localStorage.getItem('snellenScore') || '20/20';
+            const peripheralAccuracy = localStorage.getItem('peripheralAccuracy') || '100%';
+
+            // Display Snellen results
+            document.getElementById('snellen-score').innerHTML = `
+                <div class="score-value">${snellenScore}</div>
+                <p>Visual Acuity</p>
+            `;
+
+            // Display Peripheral results
+            document.getElementById('peripheral-score').innerHTML = `
+                <div class="score-value">${peripheralAccuracy}</div>
+                <p>Peripheral Vision Accuracy</p>
+            `;
+        }
+
+        // Initialize page
+        window.onload = function() {
+            createTreatmentCards();
+            displayResults();
+        };
+    </script>
+</body>
+</html> 
