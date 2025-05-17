@@ -51,34 +51,37 @@ const LEVEL_COLORS = [
 // Calculate Snellen ratio based on smallest readable size
 const calculateSnellenRatio = (sizeIndex: number) => {
   // Standard Snellen ratios for our font sizes
-  // 48px -> 20/70
-  // 24px -> 20/40
-  // 12px -> 20/20
-  // 6px -> 20/15
-  // 3px -> 20/10
-  const baseRatio = 20
+  // 48px -> 20/200 (significant impairment)
+  // 24px -> 20/70  (mild impairment)
+  // 12px -> 20/30  (near normal)
+  // 6px  -> 20/25  (good)
+  // 3px  -> 20/20  (normal)
+  // Beyond that requires many more successful levels
   if (sizeIndex < INITIAL_SIZES.length) {
     switch(sizeIndex) {
-      case 0: return "20/70"
-      case 1: return "20/40"
-      case 2: return "20/20"
-      default: return "20/70"
+      case 0: return "20/200"
+      case 1: return "20/70"
+      case 2: return "20/30"
+      default: return "20/200"
     }
   } else {
-    // For levels beyond initial sizes, calculate improved vision
+    // For levels beyond initial sizes, require more levels for better scores
     const extraLevels = sizeIndex - INITIAL_SIZES.length + 1
-    const denominator = Math.max(20 / Math.pow(2, extraLevels), 10)
-    return `20/${Math.round(denominator)}`
+    if (extraLevels <= 2) return "20/25"
+    if (extraLevels <= 4) return "20/20"
+    if (extraLevels <= 6) return "20/15"
+    return "20/10" // Requires 7+ extra levels
   }
 }
 
 // Get vision quality description
 const getVisionQuality = (sizeIndex: number) => {
-  if (sizeIndex >= INITIAL_SIZES.length + 2) return "Exceptional"
-  if (sizeIndex >= INITIAL_SIZES.length) return "Excellent"
-  if (sizeIndex >= 2) return "Normal"
-  if (sizeIndex >= 1) return "Mild Impairment"
-  return "Significant Impairment"
+  const extraLevels = Math.max(0, sizeIndex - INITIAL_SIZES.length + 1)
+  if (extraLevels >= 6) return "Exceptional"
+  if (extraLevels >= 4) return "Excellent"
+  if (extraLevels >= 2 || sizeIndex >= 2) return "Good"
+  if (sizeIndex >= 1) return "Below Average"
+  return "Needs Attention"
 }
 
 export default function Home() {
