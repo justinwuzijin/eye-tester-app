@@ -33,13 +33,11 @@ const generateRandomLetter = () => {
   return letters[Math.floor(Math.random() * letters.length)]
 }
 
-// Simplified color palette (same as Snellen test)
+// Simplified color palette (reduced levels)
 const LEVEL_COLORS = [
   { bg: '#F0F7FF', text: '#0066FF' },
   { bg: '#F3F0FF', text: '#6B2FFA' },
-  { bg: '#FFF0F6', text: '#FA2FB7' },
-  { bg: '#FFF4E5', text: '#FF8A00' },
-  { bg: '#ECFDF3', text: '#12B76A' }
+  { bg: '#FFF0F6', text: '#FA2FB7' }
 ]
 
 export default function PeripheralTest() {
@@ -101,7 +99,7 @@ export default function PeripheralTest() {
     // Speak intro after voices are loaded
     if (!hasSpokenIntro.current) {
       setTimeout(() => {
-        speakText(formatSpeech("Hi again! Dr. Sarah here. Let's check your peripheral vision, which helps us understand how well you can see things outside your direct line of sight. Click Start Test when you're ready."))
+        speakText(formatSpeech("Hi! Let's check how well you can spot things in your side vision. Keep your eyes on the center dot and tell me what letters you see!"))
         hasSpokenIntro.current = true;
       }, 1000);
     }
@@ -162,7 +160,7 @@ export default function PeripheralTest() {
 
   const startTest = () => {
     setStep("distance")
-    speakText("Hi again! Dr. Sarah here. Now we're going to check your peripheral vision - that's your ability to see things out of the corner of your eye. First, let's position your device just right, about arm's length away. I'll be asking you to focus on a dot in the center while spotting letters that appear around it. Don't worry, I'll guide you through every step!")
+    speakText(formatSpeech("Great! Hold your device at arm's length, about 40 centimeters away. Ready when you are!"))
   }
 
   const startPeripheralTest = () => {
@@ -176,7 +174,7 @@ export default function PeripheralTest() {
     setProgress(0)
     setLastTranscript("")
     setTimeout(() => {
-      speakText("Alright, let's begin! See that dot in the center? That's your focal point - just keep looking right at it. Letters will pop up around it, and all you need to do is tell me what letters you spot, just like we did before. Don't worry if you miss some - that's completely normal in this kind of test. Ready to give it a try?")
+      speakText(formatSpeech("Keep your eyes on the center dot and tell me what letters you see!"))
     }, 500)
   }
 
@@ -210,22 +208,22 @@ export default function PeripheralTest() {
         setCurrentLetter(generateRandomLetter())
         setCurrentPosition(generateRandomPosition())
         setProgress((nextLevel / (LEVEL_COLORS.length - 1)) * 100)
-        speakText(`That's it - you got it! You're doing a fantastic job keeping your eyes on the center dot. Let's try another letter. Remember, just keep looking at that center dot, and tell me what you see in your side vision.`)
+        speakText(formatSpeech("Nice! Keep going!"))
       } else {
         setStep("results")
         const score = Math.round((results.correct / results.total) * 100)
         let resultMessage = ""
         
         if (score >= 80) {
-          resultMessage = "I'm very impressed! Your peripheral vision seems to be working really well. You did an excellent job spotting those letters while keeping your focus on the center - that's exactly what we want to see!"
+          resultMessage = "Excellent peripheral vision! You spotted those letters really well."
         } else if (score >= 60) {
-          resultMessage = "You did a good job with this test. While your peripheral vision is functioning, it might be worth having a friendly chat with an eye care colleague of mine, just to make sure everything's working as well as it could be."
+          resultMessage = "Good effort! A quick check with an eye doctor might help improve your side vision."
         } else {
-          resultMessage = "Thank you for working through this test with me. I think it would be beneficial to have a comprehensive check-up with an eye care professional. They can do some more detailed tests to get a better picture of your peripheral vision."
+          resultMessage = "Thanks for trying! Let's have an eye doctor take a closer look at your peripheral vision."
         }
         
         setTimeout(() => {
-          speakText(`Wonderful work! You've completed the peripheral vision screening. ${resultMessage} And remember, while I'm here to help screen your vision, this isn't a substitute for a full eye exam. Take care!`)
+          speakText(formatSpeech(`All done! ${resultMessage}`))
         }, 500)
       }
     } else {
@@ -233,7 +231,7 @@ export default function PeripheralTest() {
         ...prev,
         total: prev.total + 1,
       }))
-      speakText(`That's alright - peripheral vision can be quite challenging! Let's try another letter. Just keep your eyes on that center dot for me, and tell me what you see when you're ready. You're doing great with this!`)
+      speakText(formatSpeech("No worries! Let's try another one."))
     }
   }
 
@@ -300,10 +298,10 @@ export default function PeripheralTest() {
                   <div className="space-y-6">
                     <div className="space-y-4">
                       <p className="text-[15px] text-[#2C2C2C] dark:text-gray-200 leading-relaxed">
-                        This test will assess your peripheral vision. Focus on the center dot while identifying letters that appear in different positions.
+                        Quick and easy! Focus on the center dot and tell me what letters you see around it.
                       </p>
                       <p className="text-[14px] text-[#666666] dark:text-gray-400 leading-relaxed">
-                        Speak clearly when you see each letter. Keep your eyes fixed on the center.
+                        Just speak clearly and keep your eyes on the center.
                       </p>
                     </div>
                     

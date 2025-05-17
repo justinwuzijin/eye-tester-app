@@ -16,16 +16,36 @@ const generateRandomString = (length: number) => {
   return Array.from({ length }, () => letters[Math.floor(Math.random() * letters.length)]).join('')
 }
 
-// Font sizes in pixels, 5 distinct levels
-const SIZES = [96, 72, 48, 32, 24]
+// Initial font sizes in pixels for the first three levels
+const INITIAL_SIZES = [48, 24, 12]
 
-// Simplified color palette
+// Get size for current level (continues halving after initial sizes)
+const getSizeForLevel = (level: number) => {
+  if (level < INITIAL_SIZES.length) {
+    return INITIAL_SIZES[level]
+  }
+  // After initial sizes, keep halving the last initial size
+  return INITIAL_SIZES[INITIAL_SIZES.length - 1] / Math.pow(2, level - INITIAL_SIZES.length + 1)
+}
+
+// Color generator for levels beyond initial colors
+const generateColor = (level: number) => {
+  if (level < LEVEL_COLORS.length) {
+    return LEVEL_COLORS[level]
+  }
+  // Generate new colors for additional levels
+  const hue = (level * 137.5) % 360 // Golden angle progression for distinct colors
+  return {
+    bg: `hsl(${hue}, 85%, 97%)`,
+    text: `hsl(${hue}, 85%, 45%)`
+  }
+}
+
+// Simplified color palette (3 levels)
 const LEVEL_COLORS = [
   { bg: '#F0F7FF', text: '#0066FF' },
   { bg: '#F3F0FF', text: '#6B2FFA' },
-  { bg: '#FFF0F6', text: '#FA2FB7' },
-  { bg: '#FFF4E5', text: '#FF8A00' },
-  { bg: '#ECFDF3', text: '#12B76A' }
+  { bg: '#FFF0F6', text: '#FA2FB7' }
 ]
 
 export default function Home() {
@@ -58,10 +78,10 @@ export default function Home() {
         utterance.voice = defaultVoice.current
       }
       
-      // Natural voice settings
-      utterance.rate = 0.95   // Slightly slower for clearer speech
-      utterance.pitch = 1.0   // Natural pitch
-      utterance.volume = 0.95 // Comfortable listening level
+      // Faster voice settings
+      utterance.rate = 1.25    // 25% faster speech
+      utterance.pitch = 1.0    // Natural pitch
+      utterance.volume = 0.95  // Comfortable listening level
       
       synth.current.speak(utterance)
     }
@@ -69,8 +89,8 @@ export default function Home() {
 
   // Add natural pauses and emphasis to text
   const formatSpeech = (text: string) => {
-    // Add commas for natural pauses
-    return text.replace(/([.!?]) /g, '$1, ')  // Add slight pauses after punctuation
+    // Shorter pauses between segments
+    return text.replace(/([.!?]) /g, '$1 ')   // Remove extra pauses after punctuation
               .replace(/(\d+)/g, ' $1 ')      // Add spaces around numbers
               .replace(/([,]) /g, '$1 ')      // Ensure spaces after commas
   }
@@ -108,10 +128,8 @@ export default function Home() {
 
     // Speak intro after voices are loaded
     if (!hasSpokenIntro.current) {
-      setTimeout(() => {
-        speakText(formatSpeech("Hi! I'm Dr. Sarah, and I'll be helping you check your vision today. When you're ready to begin, just click the Start Test button."))
-        hasSpokenIntro.current = true
-      }, 1000)
+      speakText(formatSpeech("Hi! Ready to check your vision? Just read the letters when they appear, and I'll guide you through the test."))
+      hasSpokenIntro.current = true
     }
   }
 
@@ -139,7 +157,7 @@ export default function Home() {
 
   const startTest = () => {
     setStep("distance")
-    speakText(formatSpeech("Perfect! First, let's get you positioned correctly. Hold your device at arm's length, about 40 centimeters from your eyes. Take your time to get comfortable, and when you're ready, we'll continue."))
+    speakText(formatSpeech("Great! Hold your device at arm's length, about 40 centimeters away. Click continue when ready."))
   }
 
   const startLetterTest = () => {
@@ -149,9 +167,7 @@ export default function Home() {
     setResults({ correct: 0, total: 0 })
     setProgress(0)
     setLastTranscript("")
-    setTimeout(() => {
-      speakText(formatSpeech("Great! Now, I'm going to show you some letters, starting with the larger ones. Just like in my office, read them out loud at your own pace. Don't worry if you need a moment to focus."))
-    }, 500)
+    speakText(formatSpeech("Perfect! Read the letters out loud at your own pace. Let's start with the bigger ones."))
   }
 
   const restartTest = () => {
@@ -177,37 +193,34 @@ export default function Home() {
         total: prev.total + 1,
       }))
 
-      if (currentSizeIndex < SIZES.length - 1) {
-        const nextSizeIndex = currentSizeIndex + 1
-        setCurrentSizeIndex(nextSizeIndex)
-        setCurrentString(generateRandomString(5))
-        setProgress((nextSizeIndex / (SIZES.length - 1)) * 100)
-        speakText(formatSpeech("Well done! Let's try the next row. These letters might be a bit smaller, but take your time and read them whenever you're ready."))
-      } else {
-        setStep("results")
-        const score = Math.round((results.correct / results.total) * 100)
-        let resultMessage = ""
-        
-        if (score >= 80) {
-          resultMessage = "I'm really pleased with your results! Your vision appears to be quite strong, and you did an excellent job with those letters."
-        } else if (score >= 60) {
-          resultMessage = "You did well with the test. While this is just a screening, it might be good to have a friendly chat with an eye care professional, just to make sure everything is working at its best."
-        } else {
-          resultMessage = "Thank you for completing this test. I recommend scheduling a check-up with an eye care professional. They'll be able to give you a much more thorough examination in their office."
-        }
-        
-        speakText(formatSpeech(`Excellent job completing the test! ${resultMessage} Remember, I'm just a screening tool, but I hope this has been helpful!`))
-      }
+      // Continue to next level
+      const nextSizeIndex = currentSizeIndex + 1
+      setCurrentSizeIndex(nextSizeIndex)
+      setCurrentString(generateRandomString(5))
+      // Progress bar now shows progress through initial levels
+      setProgress(Math.min((nextSizeIndex / INITIAL_SIZES.length) * 100, 100))
+      speakText(formatSpeech("Good job! Next row - take your time."))
     } else {
-      setResults((prev) => ({
-        ...prev,
-        total: prev.total + 1,
-      }))
-      speakText(formatSpeech("That's alright, these letters can be tricky. Let's try this row again. Take your time, and read them whenever you feel ready."))
+      setStep("results")
+      const score = Math.round((results.correct / results.total) * 100)
+      let resultMessage = ""
+      
+      if (currentSizeIndex >= INITIAL_SIZES.length) {
+        resultMessage = `Impressive! You made it past the standard test to level ${currentSizeIndex + 1}.`
+      } else if (currentSizeIndex >= 2) {
+        resultMessage = "Great results! Your vision looks strong."
+      } else if (currentSizeIndex >= 1) {
+        resultMessage = "Good effort! A quick check with an eye doctor might be helpful."
+      } else {
+        resultMessage = "Thanks for completing the test. I recommend scheduling an eye exam for a thorough check."
+      }
+      
+      speakText(formatSpeech(`Test complete! ${resultMessage}`))
     }
   }
 
-  const currentColor = LEVEL_COLORS[currentSizeIndex]
+  const currentColor = generateColor(currentSizeIndex)
+  const currentSize = getSizeForLevel(currentSizeIndex)
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA]">
@@ -339,7 +352,7 @@ export default function Home() {
                 >
                   <p 
                     style={{ 
-                      fontSize: `${SIZES[currentSizeIndex]}px`,
+                      fontSize: `${currentSize}px`,
                       color: currentColor.text
                     }} 
                     className="font-mono tracking-wide"
@@ -368,7 +381,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] text-[#666666]">Progress</span>
                     <span className="text-[12px] font-medium" style={{ color: currentColor.text }}>
-                      Level {currentSizeIndex + 1} of {SIZES.length}
+                      Level {currentSizeIndex + 1} of {INITIAL_SIZES.length}
                     </span>
                   </div>
                   <Progress 
