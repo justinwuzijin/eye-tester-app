@@ -10,16 +10,26 @@ import DistanceGuide from "@/components/distance-guide"
 import VoiceRecognition from "@/components/voice-recognition"
 import MicrophoneSetup from "@/components/microphone-setup"
 
-// Generate random string of lowercase letters
-const generateRandomString = (length: number) => {
-  const letters = 'abcdefghijklmnopqrstuvwxyz'
-  return Array.from({ length }, () => letters[Math.floor(Math.random() * letters.length)]).join('')
+// Generate random position for the letter
+const generateRandomPosition = () => {
+  const positions = [
+    { top: '10%', left: '10%' },
+    { top: '10%', right: '10%' },
+    { top: '50%', left: '5%' },
+    { top: '50%', right: '5%' },
+    { bottom: '10%', left: '10%' },
+    { bottom: '10%', right: '10%' }
+  ]
+  return positions[Math.floor(Math.random() * positions.length)]
 }
 
-// Font sizes in pixels, 5 distinct levels
-const SIZES = [96, 72, 48, 32, 24]
+// Generate random letter
+const generateRandomLetter = () => {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  return letters[Math.floor(Math.random() * letters.length)]
+}
 
-// Simplified color palette
+// Simplified color palette (same as Snellen test)
 const LEVEL_COLORS = [
   { bg: '#F0F7FF', text: '#0066FF' },
   { bg: '#F3F0FF', text: '#6B2FFA' },
@@ -28,10 +38,11 @@ const LEVEL_COLORS = [
   { bg: '#ECFDF3', text: '#12B76A' }
 ]
 
-export default function Home() {
+export default function PeripheralTest() {
   const [step, setStep] = useState<"intro" | "distance" | "test" | "results">("intro")
-  const [currentString, setCurrentString] = useState("")
-  const [currentSizeIndex, setCurrentSizeIndex] = useState(0)
+  const [currentLetter, setCurrentLetter] = useState("")
+  const [currentPosition, setCurrentPosition] = useState<any>(null)
+  const [currentLevel, setCurrentLevel] = useState(0)
   const [results, setResults] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 })
   const [isListening, setIsListening] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -62,25 +73,29 @@ export default function Home() {
 
   const startTest = () => {
     setStep("distance")
-    speakText("Position your device at arm's length, about 40 centimeters from your eyes. When ready, click continue.")
+    speakText("Position your device at arm's length, about 40 centimeters from your eyes. Focus on the center dot. When ready, click continue.")
   }
 
-  const startLetterTest = () => {
+  const startPeripheralTest = () => {
     setStep("test")
-    setCurrentString(generateRandomString(5))
-    setCurrentSizeIndex(0)
+    const newLetter = generateRandomLetter()
+    const newPosition = generateRandomPosition()
+    setCurrentLetter(newLetter)
+    setCurrentPosition(newPosition)
+    setCurrentLevel(0)
     setResults({ correct: 0, total: 0 })
     setProgress(0)
     setLastTranscript("")
     setTimeout(() => {
-      speakText("Level 1. Please read the letters aloud when you see them.")
+      speakText("Level 1. Keep your eyes on the center dot and say the letter you see in your peripheral vision.")
     }, 500)
   }
 
   const restartTest = () => {
     setStep("intro")
-    setCurrentString("")
-    setCurrentSizeIndex(0)
+    setCurrentLetter("")
+    setCurrentPosition(null)
+    setCurrentLevel(0)
     setResults({ correct: 0, total: 0 })
     setProgress(0)
     setLastTranscript("")
@@ -91,7 +106,7 @@ export default function Home() {
 
   const handleVoiceResult = (transcript: string) => {
     const normalizedTranscript = transcript.toLowerCase().replace(/\s+/g, '')
-    const isCorrect = normalizedTranscript.includes(currentString)
+    const isCorrect = normalizedTranscript.includes(currentLetter.toLowerCase())
     setLastTranscript(transcript)
 
     if (isCorrect) {
@@ -100,12 +115,13 @@ export default function Home() {
         total: prev.total + 1,
       }))
 
-      if (currentSizeIndex < SIZES.length - 1) {
-        const nextSizeIndex = currentSizeIndex + 1
-        setCurrentSizeIndex(nextSizeIndex)
-        setCurrentString(generateRandomString(5))
-        setProgress((nextSizeIndex / (SIZES.length - 1)) * 100)
-        speakText(`Correct. Level ${nextSizeIndex + 1}.`)
+      if (currentLevel < LEVEL_COLORS.length - 1) {
+        const nextLevel = currentLevel + 1
+        setCurrentLevel(nextLevel)
+        setCurrentLetter(generateRandomLetter())
+        setCurrentPosition(generateRandomPosition())
+        setProgress((nextLevel / (LEVEL_COLORS.length - 1)) * 100)
+        speakText(`Correct. Level ${nextLevel + 1}.`)
       } else {
         setStep("results")
         speakText("Test complete. View your results.")
@@ -115,11 +131,11 @@ export default function Home() {
         ...prev,
         total: prev.total + 1,
       }))
-      speakText(`Incorrect. Please try again for level ${currentSizeIndex + 1}.`)
+      speakText(`Incorrect. Please try again for level ${currentLevel + 1}.`)
     }
   }
 
-  const currentColor = LEVEL_COLORS[currentSizeIndex]
+  const currentColor = LEVEL_COLORS[currentLevel]
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA]">
@@ -131,27 +147,35 @@ export default function Home() {
             <h2 className="text-[15px] font-medium text-[#2C2C2C]">4Sight</h2>
           </div>
           {step !== "intro" && (
-            <button 
-              onClick={restartTest}
-              className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] transition-colors"
-            >
-              Start Over
-            </button>
+            <div className="flex items-center space-x-4">
+              <a 
+                href="/"
+                className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+              >
+                ← Back to Snellen Test
+              </a>
+              <button 
+                onClick={restartTest}
+                className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] transition-colors"
+              >
+                Start Over
+              </button>
+            </div>
           )}
         </div>
 
         {/* Title Section */}
         <div className="space-y-4 mb-8">
           <h1 className="text-[32px] font-semibold text-[#2C2C2C] tracking-tight">
-            {step === "intro" && "Test Your Vision"}
+            {step === "intro" && "Peripheral Vision Test"}
             {step === "distance" && "Position Device"}
-            {step === "test" && "Snellen Test"}
+            {step === "test" && "Peripheral Test"}
             {step === "results" && "Results"}
           </h1>
           <p className="text-[15px] text-[#666666] leading-relaxed">
-            {step === "intro" && "A simple vision test using letter recognition and voice input"}
+            {step === "intro" && "Test your peripheral vision by identifying letters while focusing on a central point"}
             {step === "distance" && "Ensure proper distance for accurate results"}
-            {step === "test" && "Speak the letters clearly into your microphone"}
+            {step === "test" && "Keep your eyes on the center dot and identify the letter"}
             {step === "results" && "Review your test results"}
           </p>
         </div>
@@ -164,11 +188,10 @@ export default function Home() {
                 <div className="space-y-6">
                   <div className="space-y-4">
                     <p className="text-[15px] text-[#2C2C2C] leading-relaxed">
-                      This app will test your vision using letters of decreasing size. You'll need to enable your microphone
-                      to respond.
+                      This test will assess your peripheral vision. Focus on the center dot while identifying letters that appear in different positions.
                     </p>
                     <p className="text-[14px] text-[#666666] leading-relaxed">
-                      Speak clearly and read all letters from left to right.
+                      Speak clearly when you see each letter. Keep your eyes fixed on the center.
                     </p>
                   </div>
                   
@@ -196,7 +219,7 @@ export default function Home() {
               </div>
               <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
                 <Button
-                  onClick={startLetterTest}
+                  onClick={startPeripheralTest}
                   className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
                 >
                   Continue <ArrowRight className="ml-2 h-4 w-4" />
@@ -215,7 +238,7 @@ export default function Home() {
                     className="flex items-center space-x-3 py-2 px-4 rounded-lg"
                   >
                     <span className="text-[14px] font-medium" style={{ color: currentColor.text }}>
-                      Level {currentSizeIndex + 1}
+                      Level {currentLevel + 1}
                     </span>
                   </div>
                   <div className="flex items-center space-x-4">
@@ -227,12 +250,6 @@ export default function Home() {
                         </span>
                       )}
                     </div>
-                    <a 
-                      href="/peripheral"
-                      className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
-                    >
-                      Try Peripheral Test →
-                    </a>
                     <div className={`flex items-center space-x-3 py-2 px-4 rounded-lg ${
                       isListening ? 'bg-[#F3F0FF] text-[#6B2FFA]' : 'bg-[#F5F5F5] text-[#2C2C2C]'
                     }`}>
@@ -244,20 +261,26 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Letters Display */}
+                {/* Test Display */}
                 <div 
                   style={{ backgroundColor: currentColor.bg }}
-                  className="flex flex-col items-center justify-center min-h-[200px] rounded-lg"
+                  className="relative flex items-center justify-center min-h-[400px] rounded-lg"
                 >
-                  <p 
+                  {/* Center Dot */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-black" />
+                  
+                  {/* Peripheral Letter */}
+                  <div 
                     style={{ 
-                      fontSize: `${SIZES[currentSizeIndex]}px`,
-                      color: currentColor.text
-                    }} 
-                    className="font-mono tracking-wide"
+                      position: 'absolute',
+                      ...currentPosition,
+                      color: currentColor.text,
+                      fontSize: '32px',
+                      fontFamily: 'monospace'
+                    }}
                   >
-                    {currentString}
-                  </p>
+                    {currentLetter}
+                  </div>
                 </div>
 
                 {/* Voice Recognition */}
@@ -280,7 +303,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] text-[#666666]">Progress</span>
                     <span className="text-[12px] font-medium" style={{ color: currentColor.text }}>
-                      Level {currentSizeIndex + 1} of {SIZES.length}
+                      Level {currentLevel + 1} of {LEVEL_COLORS.length}
                     </span>
                   </div>
                   <Progress 
@@ -306,17 +329,17 @@ export default function Home() {
 
                 <div className="space-y-6">
                   <p className="text-[15px] text-center text-[#666666]">
-                    You correctly identified {results.correct} out of {results.total} letter sets
+                    You correctly identified {results.correct} out of {results.total} peripheral letters
                   </p>
 
                   <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
                     <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
                     <p className="text-[14px] text-[#666666] leading-relaxed">
                       {results.correct / results.total >= 0.8
-                        ? "Your vision appears to be good. You were able to identify most letters correctly."
+                        ? "Your peripheral vision appears to be good. You were able to identify most letters correctly while maintaining central focus."
                         : results.correct / results.total >= 0.6
-                          ? "Your vision may need some attention. Consider consulting with an eye care professional."
-                          : "Your vision test results suggest you should consult with an eye care professional for a comprehensive examination."}
+                          ? "Your peripheral vision may need some attention. Consider consulting with an eye care professional."
+                          : "Your peripheral vision test results suggest you should consult with an eye care professional for a comprehensive examination."}
                     </p>
                   </div>
 
@@ -328,7 +351,13 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
+              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-between">
+                <Button 
+                  onClick={() => router.push('/')}
+                  className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                >
+                  Back to Snellen Test
+                </Button>
                 <Button 
                   onClick={restartTest} 
                   className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
@@ -342,4 +371,4 @@ export default function Home() {
       </div>
     </main>
   )
-}
+} 
