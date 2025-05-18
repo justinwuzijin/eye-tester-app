@@ -181,6 +181,7 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
       'double u': 'w',
       'double you': 'w',
       'ex': 'x',
+      'exe': 'x',
       'zee': 'z',
       'zed': 'z',
       // Numbers that might be interpreted as words
