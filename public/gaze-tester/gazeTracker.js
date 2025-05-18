@@ -364,8 +364,22 @@ function startCountdown() {
     
     // Play the countdown sound once at the start
     const countdownSound = document.getElementById('countdownSound');
+    if (!countdownSound) {
+        console.error('Countdown sound element not found!');
+        return;
+    }
+
+    // Add error handling for sound playback
     countdownSound.currentTime = 0;
-    countdownSound.play();
+    const playPromise = countdownSound.play();
+    
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            console.log('Countdown sound started playing');
+        }).catch(error => {
+            console.error('Error playing countdown sound:', error);
+        });
+    }
     
     function showNumber() {
         container.innerHTML = `<div class="countdown">${count}</div>`;
@@ -373,11 +387,16 @@ function startCountdown() {
         // Clear the canvas and draw the number
         const canvas = document.getElementById('gazeCanvas');
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#121212';
+        
+        // Create gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#FFFFFF');
+        gradient.addColorStop(1, '#FAFAFA');
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         ctx.font = "bold 200px Arial";
-        ctx.fillStyle = "white";
+        ctx.fillStyle = "#2C2C2C";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(count.toString(), canvas.width / 2, canvas.height / 2);
