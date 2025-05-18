@@ -153,6 +153,58 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
     isProcessingResult.current = false
   }
 
+  const processTranscript = (transcript: string): string => {
+    // Convert to lowercase and remove extra spaces
+    let processed = transcript.toLowerCase().trim()
+    
+    // Common TTS word-to-letter mappings
+    const wordToLetter: { [key: string]: string } = {
+      'why': 'y',
+      'are': 'r',
+      'see': 'c',
+      'oh': 'o',
+      'bee': 'b',
+      'be': 'b',
+      // Additional common interpretations
+      'eye': 'i',
+      'you': 'u',
+      'tea': 't',
+      'sea': 'c',
+      'kay': 'k',
+      'jay': 'j',
+      'eh': 'a',
+      'aye': 'a',
+      'em': 'm',
+      'en': 'n',
+      'pee': 'p',
+      'cue': 'q',
+      'double u': 'w',
+      'double you': 'w',
+      'ex': 'x',
+      'zee': 'z',
+      'zed': 'z',
+      // Numbers that might be interpreted as words
+      'one': '1',
+      'two': '2',
+      'three': '3',
+      'four': '4',
+      'five': '5',
+      'six': '6',
+      'seven': '7',
+      'eight': '8',
+      'nine': '9',
+      'zero': '0'
+    }
+    
+    // Split into words and process each
+    processed = processed.split(' ').map(word => {
+      // Check if this word should be converted to a letter
+      return wordToLetter[word] || word
+    }).join('')
+    
+    return processed
+  }
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -174,12 +226,17 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
 
       recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         console.log("Speech recognition result received", event.results)
-        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase()
+        const rawTranscript = event.results[event.results.length - 1][0].transcript.toLowerCase()
+        console.log("Raw transcript:", rawTranscript)
+        
+        // Process the transcript to handle TTS word interpretations
+        const processedTranscript = processTranscript(rawTranscript)
+        console.log("Processed transcript:", processedTranscript)
         
         // Stop listening and process result
         isProcessingResult.current = true
         stopRecognition()
-        onResult(transcript)
+        onResult(processedTranscript)
       }
 
       recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
