@@ -490,8 +490,8 @@ export default function Home() {
                 <Image
                   src="/logo.png"
                   alt="4Sight Logo"
-                  width={200}
-                  height={200}
+                  width={250}
+                  height={250}
                   priority
                   className="mb-4"
                 />
