@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Volume2 } from 'lucide-react';
+import { Volume2, ArrowRight } from 'lucide-react';
 
 export default function GazeResultsPage() {
   const [gazeAccuracy, setGazeAccuracy] = useState('95%');
@@ -306,52 +306,31 @@ export default function GazeResultsPage() {
                 This is not a medical diagnosis. Results may vary based on device screen, lighting conditions, and individual factors. Please consult an eye care professional for a comprehensive evaluation.
               </p>
             </div>
-          </div>
-        </section>
 
-        <section id="recommendations" className="max-w-2xl mx-auto mb-12 px-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
-            <h2 className="text-xl font-medium mb-6">Improvement Recommendations</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                {
-                  name: "Eye Exercises",
-                  info: "Regular eye movement exercises to improve gaze control and tracking ability.",
-                  duration: "10-15 mins daily",
-                  icon: "👁️"
-                },
-                {
-                  name: "Screen Breaks",
-                  info: "Take regular breaks to reduce eye strain and maintain optimal tracking performance.",
-                  duration: "Every 20 mins",
-                  icon: "⏲️"
-                },
-                {
-                  name: "Focus Practice",
-                  info: "Practice switching focus between near and far objects to enhance eye control.",
-                  duration: "5 mins, 3x daily",
-                  icon: "🎯"
-                },
-                {
-                  name: "Tracking Games",
-                  info: "Play eye-tracking games to improve accuracy and reaction time in a fun way.",
-                  duration: "15-20 mins daily",
-                  icon: "🎮"
-                }
-              ].map((recommendation, index) => (
-                <div 
-                  key={recommendation.name}
-                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 transition-transform hover:-translate-y-1"
-                  style={{ animationDelay: `${index * 0.05}s` }}
+            <div className="mt-8 pt-8 border-t border-[#E6E6E6] dark:border-gray-600">
+              <div className="text-center">
+                <h3 className="text-[16px] font-medium text-[#2C2C2C] dark:text-gray-200 mb-2">
+                  View Detailed Analysis
+                </h3>
+                <p className="text-[14px] text-[#666666] dark:text-gray-400 mb-4">
+                  See a comprehensive breakdown of your vision test results
+                </p>
+                <a
+                  href="/results"
+                  className="inline-flex items-center justify-center space-x-2 bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 hover:bg-[#E6E0FF] dark:hover:bg-gray-600 px-6 py-3 rounded-lg transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Store results in localStorage
+                    localStorage.setItem('gazeAccuracy', gazeAccuracy);
+                    localStorage.setItem('reactionTime', reactionTime);
+                    // Navigate to results page
+                    router.push('/results');
+                  }}
                 >
-                  <div className="text-2xl mb-3">{recommendation.icon}</div>
-                  <h3 className="font-medium mb-2">{recommendation.name}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{recommendation.info}</p>
-                  <p className="text-sm font-medium text-[#6B2FFA] dark:text-purple-300">
-                    {recommendation.duration}
-                  </p>
-                </div>
-              ))}
+                  <span className="text-[14px] font-medium">View Detailed Results</span>
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </div>
             </div>
           </div>
         </section>

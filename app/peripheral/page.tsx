@@ -463,24 +463,11 @@ export default function PeripheralTest() {
                 >
                   ← Back to Snellen Test
                 </a>
-                <button 
-                  onClick={() => setStep("results")}
-                  className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
-                  aria-label="View latest test results"
-                >
-                  View Results
-                </button>
-                <button 
-                  onClick={restartTest}
-                  className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] dark:text-gray-200 dark:hover:text-purple-300 transition-colors"
-                >
-                  Start Over
-                </button>
                 <a 
-                  href="/gaze-tester/index.html"
+                  href="/gaze-tester"
                   className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
                 >
-                  Try Gaze Test →
+                  Try Tracking Test →
                 </a>
               </div>
             )}
@@ -579,13 +566,21 @@ export default function PeripheralTest() {
 
                   {/* Score display */}
                   <div className="absolute top-4 right-4">
-                    <div className="text-[14px] font-medium text-[#2C2C2C] dark:text-gray-200">
-                      Score: {results.correct}/{results.total}
-                      {results.total > 0 && (
-                        <span className="ml-2 text-[#666666] dark:text-gray-400">
-                          ({Math.round((results.correct / results.total) * 100)}%)
-                        </span>
-                      )}
+                    <div className="flex items-center space-x-4">
+                      <div className="text-[14px] font-medium text-[#2C2C2C] dark:text-gray-200">
+                        Score: {results.correct}/{results.total}
+                        {results.total > 0 && (
+                          <span className="ml-2 text-[#666666] dark:text-gray-400">
+                            ({Math.round((results.correct / results.total) * 100)}%)
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => setStep("results")}
+                        className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Quit Test
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -768,14 +763,14 @@ export default function PeripheralTest() {
 
                 <div className="px-8 py-6 bg-[#F5F5F5] dark:bg-gray-700 flex justify-between">
                   <Button 
-                    onClick={() => router.push('/')}
+                    onClick={() => router.push('/gaze-tester')}
                     className="bg-white dark:bg-gray-800 border border-[#6B2FFA] dark:border-purple-300 text-[#6B2FFA] dark:text-purple-300 hover:bg-[#F3F0FF] dark:hover:bg-gray-700 rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
-                    aria-label="Return to Snellen Test"
+                    aria-label="Try eye tracking test"
                   >
-                    Back to Snellen Test
+                    Try Tracking Test
                   </Button>
                   <Button 
-                    onClick={restartTest} 
+                    onClick={() => restartTest()}
                     className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
                     aria-label="Start a new peripheral vision test"
                   >

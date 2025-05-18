@@ -2,11 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Volume2 } from 'lucide-react';
+import { Volume2, Eye, Target, Crosshair } from 'lucide-react';
 
 export default function ResultsPage() {
-  const [snellenScore, setSnellenScore] = useState('20/20');
-  const [peripheralAccuracy, setPeripheralAccuracy] = useState('100%');
+  const [results, setResults] = useState({
+    snellen: { score: '20/20', accuracy: '0%' },
+    peripheral: { score: '0%' },
+    gazeTracker: { accuracy: '0%', reactionTime: '0.0s' }
+  });
+  
   const router = useRouter();
   const synth = useRef<SpeechSynthesis | null>(null);
   const defaultVoice = useRef<SpeechSynthesisVoice | null>(null);
@@ -15,29 +19,23 @@ export default function ResultsPage() {
   // Load and set the voice
   const loadVoices = () => {
     const voices = synth.current?.getVoices() || [];
-    console.log("Available voices:", voices.map(v => ({ name: v.name, lang: v.lang })));
-    
-    // Expanded list of preferred voices
     const preferredVoices = [
-      // Premium natural voices
-      "Microsoft Aria Online (Natural)",  // Windows/Edge
-      "Microsoft Guy Online (Natural)",   // Windows/Edge
-      "Google UK English Male",           // Chrome
-      "Google UK English Female",         // Chrome
-      "Karen",                           // macOS
-      "Daniel",                          // macOS
-      "Moira",                           // macOS
-      "Samantha",                        // macOS/iOS
-      "Microsoft David",                 // Windows
-      "Microsoft Mark",                  // Windows
-      "Microsoft Zira",                  // Windows
-      // Fallback to any English voice if none of the above are found
+      "Microsoft Aria Online (Natural)",
+      "Microsoft Guy Online (Natural)",
+      "Google UK English Male",
+      "Google UK English Female",
+      "Karen",
+      "Daniel",
+      "Moira",
+      "Samantha",
+      "Microsoft David",
+      "Microsoft Mark",
+      "Microsoft Zira",
       "en-US",
       "en-GB",
       "en"
     ];
     
-    // Try to find the best available voice
     for (const preferredVoice of preferredVoices) {
       const voice = voices.find(v => 
         v.name.includes(preferredVoice) || 
@@ -45,44 +43,49 @@ export default function ResultsPage() {
       );
       
       if (voice) {
-        console.log("Selected voice:", voice.name);
         defaultVoice.current = voice;
         break;
       }
     }
 
-    // Speak intro after voices are loaded
     if (!hasSpokenIntro.current) {
       setTimeout(() => {
-        speakText(formatSpeech("Welcome to your detailed vision analysis! I'll walk you through your test results and what they mean for your eye health."));
+        speakText(formatSpeech("Welcome to your comprehensive vision analysis! Here are your results from all three tests."));
         hasSpokenIntro.current = true;
       }, 1000);
     }
   };
 
   useEffect(() => {
-    // Initialize speech synthesis
     if (typeof window !== "undefined") {
       synth.current = window.speechSynthesis;
       
-      // Chrome requires a callback for voice loading
       if (synth.current?.addEventListener) {
         synth.current.addEventListener('voiceschanged', loadVoices);
       }
       
-      // Initial load attempt
       loadVoices();
-    }
 
-    // Get results from localStorage
-    const storedSnellenScore = localStorage.getItem('snellenScore');
-    const storedPeripheralAccuracy = localStorage.getItem('peripheralAccuracy');
-    
-    if (storedSnellenScore) {
-      setSnellenScore(storedSnellenScore);
-    }
-    if (storedPeripheralAccuracy) {
-      setPeripheralAccuracy(storedPeripheralAccuracy);
+      // Get all test results from localStorage
+      const snellenScore = localStorage.getItem('snellenScore') || '20/20';
+      const snellenAccuracy = localStorage.getItem('snellenAccuracy') || '0%';
+      const peripheralAccuracy = localStorage.getItem('peripheralAccuracy') || '0%';
+      const gazeAccuracy = localStorage.getItem('gazeAccuracy') || '0%';
+      const reactionTime = localStorage.getItem('reactionTime') || '0.0s';
+      
+      setResults({
+        snellen: { 
+          score: snellenScore,
+          accuracy: snellenAccuracy
+        },
+        peripheral: { 
+          score: peripheralAccuracy
+        },
+        gazeTracker: {
+          accuracy: gazeAccuracy,
+          reactionTime: reactionTime
+        }
+      });
     }
 
     return () => {
@@ -95,171 +98,151 @@ export default function ResultsPage() {
     };
   }, []);
 
-  // Add natural pauses and emphasis to text
   const formatSpeech = (text: string) => {
-    return text.replace(/([.!?]) /g, '$1, ')  // Add slight pauses after punctuation
-              .replace(/(\d+)/g, ' $1 ')      // Add spaces around numbers
-              .replace(/([,]) /g, '$1 ')      // Ensure spaces after commas
+    return text.replace(/([.!?]) /g, '$1, ')
+              .replace(/(\d+)/g, ' $1 ')
+              .replace(/([,]) /g, '$1 ');
   };
 
   const speakText = (text: string) => {
     if (synth.current) {
-      // Cancel any ongoing speech
       if (synth.current.speaking) {
         synth.current.cancel();
       }
       
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Use the selected default voice
       if (defaultVoice.current) {
         utterance.voice = defaultVoice.current;
       }
       
-      // Faster voice settings
-      utterance.rate = 1.25;    // Increased speed (25% faster)
-      utterance.pitch = 1.0;    // Natural pitch
-      utterance.volume = 0.95;  // Comfortable listening level
+      utterance.rate = 1.25;
+      utterance.pitch = 1.0;
+      utterance.volume = 0.95;
       
       synth.current.speak(utterance);
     }
   };
 
   const speakResults = () => {
-    const snellenMessage = `Your Snellen test score is ${snellenScore}, `;
-    const peripheralMessage = `and your peripheral vision accuracy is ${peripheralAccuracy}. `;
+    const message = `
+      Here are your comprehensive vision test results:
+      For the Snellen vision test, your score was ${results.snellen.score} with ${results.snellen.accuracy} accuracy.
+      In the peripheral vision test, you achieved ${results.peripheral.score} accuracy.
+      Your gaze tracking test showed ${results.gazeTracker.accuracy} accuracy with a reaction time of ${results.gazeTracker.reactionTime}.
+    `;
     
-    let recommendationMessage = "";
-    const snellenNum = parseInt(snellenScore.split('/')[1]);
-    const peripheralNum = parseInt(peripheralAccuracy);
-    
-    if (snellenNum <= 20 && peripheralNum >= 80) {
-      recommendationMessage = "Your vision appears to be in good health! Keep up with regular eye check-ups to maintain your eye health.";
-    } else if (snellenNum <= 40 && peripheralNum >= 60) {
-      recommendationMessage = "Your vision might benefit from some attention. Consider scheduling a check-up with an eye care professional.";
-    } else {
-      recommendationMessage = "I recommend scheduling a comprehensive eye examination to better understand and address your vision needs.";
-    }
-
-    speakText(formatSpeech(`${snellenMessage}${peripheralMessage}${recommendationMessage}`));
+    speakText(formatSpeech(message));
   };
 
   return (
-    <div className="container min-h-screen bg-gradient-to-b from-white to-[#FAFAFA] dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
-      <header className="max-w-2xl mx-auto mb-12 px-6 pt-16">
-        <div className="flex items-center gap-2 mb-12">
-          <div className="w-3 h-3 bg-[#6B2FFA] rounded-sm"></div>
-          <span className="text-[0.9375rem] font-medium">4Sight</span>
-        </div>
-        <h1 className="text-4xl font-semibold tracking-tight mb-4">
-          Detailed Vision Analysis
-        </h1>
-        <p className="text-[0.9375rem] text-gray-600 dark:text-gray-400 mb-8">
-          A comprehensive breakdown of your vision test results and recommendations
-        </p>
-        <nav className="flex gap-4">
-          <button 
-            onClick={() => document.getElementById('test-results')?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-6 py-3 text-sm font-medium bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#E6E0FF] dark:hover:bg-gray-600 transition-colors"
-            aria-label="View test results"
-          >
-            Test Results
-          </button>
-          <button
-            onClick={() => document.getElementById('treatments')?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-6 py-3 text-sm font-medium bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#E6E0FF] dark:hover:bg-gray-600 transition-colors"
-            aria-label="View treatment options"
-          >
-            Treatment Options
-          </button>
-          <button
-            onClick={() => router.push('/')}
-            className="px-6 py-3 text-sm font-medium bg-white dark:bg-gray-800 border border-[#6B2FFA] dark:border-purple-300 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#F3F0FF] dark:hover:bg-gray-700 transition-colors"
-            aria-label="Return to tests"
-          >
-            Return to Tests
-          </button>
-        </nav>
-      </header>
-
-      <section id="test-results" className="max-w-2xl mx-auto mb-12 px-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-medium">Test Results Summary</h2>
+    <div className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA] dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        <header className="mb-12">
+          <div className="flex items-center gap-2 mb-12">
+            <div className="w-3 h-3 bg-[#6B2FFA] rounded-sm"></div>
+            <span className="text-[0.9375rem] font-medium">4Sight</span>
+          </div>
+          <h1 className="text-4xl font-semibold tracking-tight mb-4">
+            Final Results Analysis
+          </h1>
+          <p className="text-[0.9375rem] text-gray-600 dark:text-gray-400 mb-8">
+            Comprehensive analysis of your vision test performance across all tests
+          </p>
+          <nav className="flex gap-4">
             <button
-              onClick={speakResults}
-              className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
-              aria-label="Read results aloud"
+              onClick={() => router.push('/')}
+              className="px-6 py-3 text-sm font-medium bg-white dark:bg-gray-800 border border-[#6B2FFA] dark:border-purple-300 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#F3F0FF] dark:hover:bg-gray-700 transition-colors"
             >
-              <Volume2 className="h-4 w-4" />
-              <span>Read Results</span>
+              Return to Home
             </button>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6 text-center">
-              <h3 className="text-sm font-medium mb-4">Snellen Test Results</h3>
-              <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
-                {snellenScore}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Visual Acuity</p>
-            </div>
-            <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6 text-center">
-              <h3 className="text-sm font-medium mb-4">Peripheral Vision Results</h3>
-              <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
-                {peripheralAccuracy}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Peripheral Vision Accuracy</p>
-            </div>
-          </div>
-        </div>
-      </section>
+          </nav>
+        </header>
 
-      <section id="treatments" className="max-w-2xl mx-auto mb-12 px-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
-          <h2 className="text-xl font-medium mb-6">Recommended Treatments</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              {
-                name: "Glasses",
-                info: "Prescription lenses that correct refractive errors such as myopia, hyperopia, and astigmatism.",
-                cost: "$200 - $350",
-                icon: "👓"
-              },
-              {
-                name: "Contact Lenses",
-                info: "Soft or rigid lenses worn directly on the eye to correct vision.",
-                cost: "$1000",
-                icon: "👁️"
-              },
-              {
-                name: "Better eye practices",
-                info: "Take a 20-second break every 20 minutes and look at something 20 feet away.",
-                cost: "$0",
-                icon: "⏲️"
-              },
-              {
-                name: "LASIK Eye Surgery",
-                info: "Corrects hyperopia and myopia. A laser surgical procedure that permanently reshapes the cornea.",
-                cost: "$1500 to $3500 per eye",
-                icon: "⚡"
-              }
-            ].map((treatment, index) => (
-              <div 
-                key={treatment.name}
-                className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 transition-transform hover:-translate-y-1"
-                style={{ animationDelay: `${index * 0.05}s` }}
+        <section className="max-w-2xl mx-auto mb-12">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-medium">Test Results Summary</h2>
+              <button
+                onClick={speakResults}
+                className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
+                aria-label="Read results aloud"
               >
-                <div className="text-3xl mb-4" aria-hidden="true">{treatment.icon}</div>
-                <h3 className="text-sm font-medium mb-3">{treatment.name}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{treatment.info}</p>
-                <p className="text-sm font-medium text-[#6B2FFA] dark:text-purple-300">
-                  Cost: {treatment.cost}
+                <Volume2 className="h-4 w-4" />
+                <span>Read Results</span>
+              </button>
+            </div>
+            
+            <div className="grid gap-6">
+              {/* Snellen Test Results */}
+              <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Eye className="h-5 w-5 text-[#6B2FFA] dark:text-purple-300" />
+                  <h3 className="text-lg font-medium">Snellen Vision Test</h3>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Vision Score</p>
+                    <p className="text-2xl font-semibold text-[#6B2FFA] dark:text-purple-300">
+                      {results.snellen.score}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Accuracy</p>
+                    <p className="text-2xl font-semibold text-[#6B2FFA] dark:text-purple-300">
+                      {results.snellen.accuracy}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Peripheral Vision Test Results */}
+              <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Target className="h-5 w-5 text-[#6B2FFA] dark:text-purple-300" />
+                  <h3 className="text-lg font-medium">Peripheral Vision Test</h3>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Accuracy</p>
+                  <p className="text-2xl font-semibold text-[#6B2FFA] dark:text-purple-300">
+                    {results.peripheral.score}
+                  </p>
+                </div>
+              </div>
+
+              {/* Gaze Tracking Test Results */}
+              <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Crosshair className="h-5 w-5 text-[#6B2FFA] dark:text-purple-300" />
+                  <h3 className="text-lg font-medium">Gaze Tracking Test</h3>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Accuracy</p>
+                    <p className="text-2xl font-semibold text-[#6B2FFA] dark:text-purple-300">
+                      {results.gazeTracker.accuracy}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Reaction Time</p>
+                    <p className="text-2xl font-semibold text-[#6B2FFA] dark:text-purple-300">
+                      {results.gazeTracker.reactionTime}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-[#E6E6E6] dark:border-gray-600">
+              <div className="bg-[#FFF4E5] p-4 rounded-lg mb-6">
+                <p className="text-[12px] text-[#B76E00] text-center">
+                  This is not a medical diagnosis. Results may vary based on device screen, lighting conditions, and individual factors. Please consult an eye care professional for a comprehensive evaluation.
                 </p>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 } 
