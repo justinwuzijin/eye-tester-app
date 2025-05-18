@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -447,7 +448,7 @@ export default function Home() {
   const currentLevel = getCurrentLevel(currentLevelIndex)
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA]">
+    <main className="min-h-screen p-4 flex flex-col items-center justify-center bg-gradient-to-b from-white to-gray-100">
       <div className="max-w-2xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="flex items-center justify-between mb-12">
@@ -484,34 +485,31 @@ export default function Home() {
         {/* Main Card */}
         <Card className="overflow-hidden border-0 shadow-lg rounded-xl">
           {step === "intro" && (
-            <div>
-              <div className="px-8 py-10 bg-white">
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <p className="text-[15px] text-[#2C2C2C] leading-relaxed">
-                      This app will test your vision using letters of decreasing size. You'll need to enable your microphone
-                      to respond.
-                    </p>
-                    <p className="text-[14px] text-[#666666] leading-relaxed">
-                      Speak clearly and read all letters from left to right.
-                    </p>
-                  </div>
-                  
-                  <MicrophoneSetup onPermissionGranted={handleMicrophonePermission} />
-                </div>
-              </div>
-              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
-                <Button 
+            <Card className="w-full max-w-lg p-6 space-y-6 text-center">
+              <div className="flex flex-col items-center space-y-6">
+                <Image
+                  src="/logo.png"
+                  alt="4Sight Logo"
+                  width={200}
+                  height={200}
+                  priority
+                  className="mb-4"
+                />
+                <h1 className="text-3xl font-bold tracking-tighter">Welcome to 4Sight</h1>
+                <p className="text-muted-foreground">
+                  Your personal vision testing assistant. Let's check your vision together.
+                </p>
+                <MicrophoneSetup onPermissionGranted={handleMicrophonePermission} />
+                <Button
+                  className="w-full"
                   onClick={startTest}
                   disabled={!micPermissionGranted}
-                  className={`bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200 ${
-                    !micPermissionGranted && 'opacity-50 cursor-not-allowed'
-                  }`}
                 >
-                  Start Test <ArrowRight className="ml-2 h-4 w-4" />
+                  Start Vision Test
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </Card>
           )}
 
           {step === "distance" && (
