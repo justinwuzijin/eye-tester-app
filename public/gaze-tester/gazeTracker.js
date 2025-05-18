@@ -160,8 +160,8 @@ function calculateAccuracy() {
     
     // Calculate the screen diagonal for scaling
     const screenDiagonal = Math.sqrt(window.innerWidth * window.innerWidth + window.innerHeight * window.innerHeight);
-    // Use a more forgiving radius multiplier (8 times the circle radius)
-    const maxErrorDistance = circle.radius * 8;
+    // Use a much more lenient radius multiplier (20 times the circle radius for maximum error)
+    const maxErrorDistance = circle.radius * 20;
     
     for (const data of trackingData) {
         // Skip invalid gaze data
@@ -177,18 +177,25 @@ function calculateAccuracy() {
             Math.pow(avgGazeY - data.target.y, 2)
         );
         
-        // Use a sigmoid-like function to make the error curve more forgiving
-        // This will make small deviations less punishing and large deviations more forgiving
-        const normalizedError = Math.min(1, Math.pow(distance / maxErrorDistance, 1.5));
+        // Use a more forgiving sigmoid function with adjusted parameters
+        // This creates a more lenient curve where:
+        // - Small deviations (< 4x radius) have minimal impact
+        // - Medium deviations (4x-12x radius) have moderate impact
+        // - Large deviations (>12x radius) have major impact
+        const normalizedDistance = distance / maxErrorDistance;
+        // Adjusted sigmoid parameters for more lenient scoring
+        const normalizedError = 1 / (1 + Math.exp(-4 * (normalizedDistance - 0.6)));
         totalError += normalizedError;
         validSamples++;
     }
     
     if (validSamples === 0) return 0;
     
-    // Calculate accuracy percentage with improved scaling
+    // Calculate accuracy percentage with boosted base accuracy
     const accuracy = 100 * (1 - (totalError / validSamples));
-    return Math.max(0, Math.min(100, Math.round(accuracy)));
+    // Add a small boost to the accuracy to make it more encouraging
+    const boostedAccuracy = accuracy * 1.2;
+    return Math.max(0, Math.min(100, Math.round(boostedAccuracy)));
 }
 
 function updateFPS(timestamp) {
@@ -404,6 +411,7 @@ document.querySelectorAll('.calibrationDot').forEach(dot => {
 function startCountdown() {
     isCalibrating = false;  // We're done with calibration
     const container = document.getElementById('calibrationContainer');
+    container.style.backgroundColor = 'transparent';  // Ensure container is transparent
     let count = 3;
     
     // Play the countdown sound once at the start
@@ -412,19 +420,26 @@ function startCountdown() {
     countdownSound.play();
     
     function showNumber() {
-        container.innerHTML = `<div class="countdown">${count}</div>`;
+        // Create countdown element with explicit styling
+        const countdownDiv = document.createElement('div');
+        countdownDiv.className = 'countdown';
+        countdownDiv.textContent = count;
         
-        // Clear the canvas and draw the number
+        // Clear container and add new countdown
+        container.innerHTML = '';
+        container.appendChild(countdownDiv);
+        
+        // Clear the canvas but keep it transparent
         const canvas = document.getElementById('gazeCanvas');
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#121212';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        ctx.font = "bold 200px Arial";
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(count.toString(), canvas.width / 2, canvas.height / 2);
+        // Create gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#FFFFFF');
+        gradient.addColorStop(1, '#FAFAFA');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         if (count > 0) {
             count--;
@@ -440,15 +455,15 @@ function startCountdown() {
 
 // Calibration points configuration
 const calibrationPoints = [
-    { top: '5%', left: '5%' },
-    { top: '5%', left: '45%' },
-    { top: '5%', left: '85%' },
-    { top: '45%', left: '5%' },
-    { top: '45%', left: '45%' },
-    { top: '45%', left: '85%' },
-    { top: '85%', left: '5%' },
-    { top: '85%', left: '45%' },
-    { top: '85%', left: '85%' }
+    { top: '15%', left: '5%' },    // Shifted down from 5%
+    { top: '15%', left: '45%' },   // Shifted down from 5%
+    { top: '15%', left: '85%' },   // Shifted down from 5%
+    { top: '50%', left: '5%' },    // Shifted down from 45%
+    { top: '50%', left: '45%' },   // Shifted down from 45%
+    { top: '50%', left: '85%' },   // Shifted down from 45%
+    { top: '85%', left: '5%' },    // Kept at 85%
+    { top: '85%', left: '45%' },   // Kept at 85%
+    { top: '85%', left: '85%' }    // Kept at 85%
 ];
 
 let currentCalibrationPoint = 0;

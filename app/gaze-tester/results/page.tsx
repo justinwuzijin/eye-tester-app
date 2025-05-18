@@ -202,14 +202,103 @@ export default function GazeResultsPage() {
           <div className="grid gap-4">
             <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
               <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
-              <p className="text-[14px] text-[#666666] leading-relaxed">
-                {parseInt(gazeAccuracy) >= 90 && parseFloat(reactionTime) <= 0.6
-                  ? "Your eye tracking capabilities are excellent! Your gaze control and reaction time are well above average."
-                  : parseInt(gazeAccuracy) >= 70 && parseFloat(reactionTime) <= 1.0
-                  ? "Your eye tracking performance is good, but there's room for improvement. Regular practice can help enhance your gaze control."
-                  : "Consider practicing more with eye-tracking exercises to improve your gaze control and reaction time. Regular practice will help enhance your performance."
-                }
-              </p>
+              {(() => {
+                const accuracyNum = parseInt(gazeAccuracy);
+                const reactionNum = parseFloat(reactionTime);
+                
+                // Helper function to get reaction time assessment
+                const getReactionAssessment = (time: number) => {
+                  if (time <= 0.3) return "exceptional";
+                  if (time <= 0.5) return "excellent";
+                  if (time <= 0.8) return "good";
+                  if (time <= 1.0) return "average";
+                  return "below average";
+                };
+
+                // Helper function to get accuracy assessment
+                const getAccuracyAssessment = (score: number) => {
+                  if (score >= 95) return "exceptional";
+                  if (score >= 90) return "excellent";
+                  if (score >= 85) return "very good";
+                  if (score >= 80) return "good";
+                  if (score >= 75) return "fair";
+                  return "needs improvement";
+                };
+
+                const accuracyAssessment = getAccuracyAssessment(accuracyNum);
+                const reactionAssessment = getReactionAssessment(reactionNum);
+
+                return (
+                  <div className="space-y-4">
+                    <p className="text-[14px] text-[#666666] leading-relaxed">
+                      {accuracyNum >= 90 && reactionNum <= 0.5 ? (
+                        <>
+                          <strong className="text-[#6B2FFA]">Outstanding Performance!</strong> Your eye tracking capabilities are exceptional. 
+                          With {accuracyNum}% accuracy and a {reactionNum}s reaction time, you demonstrate excellent control and responsiveness. 
+                          This level of performance is ideal for precision tasks and advanced eye-tracking applications.
+                        </>
+                      ) : accuracyNum >= 80 && reactionNum <= 0.8 ? (
+                        <>
+                          <strong className="text-[#6B2FFA]">Very Good Performance!</strong> Your eye tracking shows strong capabilities. 
+                          Your {accuracyNum}% accuracy is impressive, and your {reactionNum}s reaction time is well within normal ranges. 
+                          With some practice, you could achieve even better results.
+                        </>
+                      ) : accuracyNum >= 65 ? (
+                        <>
+                          <strong className="text-[#6B2FFA]">Good Performance</strong> Your eye tracking shows normal results. 
+                          With {accuracyNum}% accuracy and {reactionNum}s reaction time, you're demonstrating typical eye tracking ability. 
+                          Regular practice could help enhance both your accuracy and speed if you'd like to improve further.
+                        </>
+                      ) : accuracyNum >= 50 ? (
+                        <>
+                          <strong className="text-[#6B2FFA]">Normal Performance</strong> Your eye tracking is within normal ranges. 
+                          While your {accuracyNum}% accuracy shows room for improvement, this is a common score for many people. 
+                          If you'd like to enhance your performance, try the suggested exercises below.
+                        </>
+                      ) : (
+                        <>
+                          <strong className="text-[#FF4444]">Below Expected Range</strong> Your eye tracking performance ({accuracyNum}% accuracy) 
+                          is below typical ranges. This could be due to various factors like:
+                          <ul className="list-disc ml-4 mt-2 mb-2 text-[#666666]">
+                            <li>Lighting conditions</li>
+                            <li>Screen position or distance</li>
+                            <li>Camera calibration issues</li>
+                            <li>Potential vision-related factors</li>
+                          </ul>
+                          Consider trying the test again with good lighting and proper positioning. If scores remain low, a vision check might be helpful.
+                        </>
+                      )}
+                    </p>
+                    <div className="text-[13px] text-[#666666] pt-2 border-t border-purple-100">
+                      <p className="mb-2">
+                        <strong className="text-[#2C2C2C]">Accuracy Assessment:</strong> Your gaze accuracy is {accuracyAssessment} 
+                         ({accuracyNum}%). {accuracyNum >= 80 ? "This shows excellent eye control!" : 
+                          accuracyNum >= 65 ? "This is a good, typical result." : 
+                          accuracyNum >= 50 ? "This is within normal ranges." :
+                          "Try adjusting your setup and retaking the test."}
+                      </p>
+                      <p>
+                        <strong className="text-[#2C2C2C]">Reaction Time Assessment:</strong> Your response time is {reactionAssessment} 
+                         ({reactionTime}). {reactionNum <= 0.5 ? "This is remarkably fast!" : 
+                          reactionNum <= 0.8 ? "This shows good responsiveness." : 
+                          reactionNum <= 1.2 ? "This is a typical response time." :
+                          "Consider retaking the test to improve this score."}
+                      </p>
+                      {(accuracyNum < 50 || reactionNum > 1.5) && (
+                        <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg text-amber-700">
+                          <strong>Suggestions for Improvement:</strong>
+                          <ul className="list-disc ml-4 mt-2 space-y-1">
+                            <li>Ensure you're in a well-lit room</li>
+                            <li>Position yourself 40-50cm from the screen</li>
+                            <li>Take breaks if your eyes feel tired</li>
+                            <li>Consider a routine vision check if scores consistently remain low</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="bg-[#FFF4E5] p-4 rounded-lg">
