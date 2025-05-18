@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Volume2, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Logo } from '@/components/Logo';
 
 export default function GazeResultsPage() {
   const [gazeAccuracy, setGazeAccuracy] = useState('95%');
@@ -132,8 +135,7 @@ export default function GazeResultsPage() {
       <div className="max-w-2xl mx-auto px-6 py-16">
         <header className="mb-12">
           <div className="flex items-center gap-2 mb-12">
-            <div className="w-3 h-3 bg-[#6B2FFA] rounded-sm"></div>
-            <span className="text-[0.9375rem] font-medium">4Sight</span>
+            <Logo />
           </div>
           <h1 className="text-4xl font-semibold tracking-tight mb-4">
             Gaze Tracking Analysis

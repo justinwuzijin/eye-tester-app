@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 export default function GazeInstructionsPage() {
   const startTest = () => {
@@ -14,10 +15,7 @@ export default function GazeInstructionsPage() {
       <div className="max-w-2xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-sm bg-[#6B2FFA]"></div>
-            <h2 className="text-[15px] font-medium text-[#2C2C2C]">4Sight</h2>
-          </div>
+          <Logo />
           <a 
             href="/"
             className="text-[14px] text-[#2C2C2C] hover:text-[#6B2FFA] transition-colors"
