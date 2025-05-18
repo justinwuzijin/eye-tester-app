@@ -36,7 +36,7 @@ const SNELLEN_LEVELS: SnellenLevel[] = [
   { ratio: "20/40", multiplier: 2, fontSizePt: 8, fontSizePx: 10.7 },
   { ratio: "20/32", multiplier: 1.6, fontSizePt: 6.4, fontSizePx: 8.5 },
   { ratio: "20/25", multiplier: 1.25, fontSizePt: 5, fontSizePx: 6.7 },
-  { ratio: "20/20", multiplier: 1, fontSizePt: 4, fontSizePx: 5.3 }
+  { ratio: "20/20", multiplier: 1, fontSizePt: 4, fontSizePx: 5 }
 ]
 
 const getCurrentLevel = (index: number) => SNELLEN_LEVELS[index]
