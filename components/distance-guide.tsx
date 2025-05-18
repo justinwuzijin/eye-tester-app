@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import * as faceapi from 'face-api.js'
 
-export default function DistanceGuide() {
+export default function DistanceGuide({ compact = false }: { compact?: boolean }) {
   const [windowWidth, setWindowWidth] = useState(0)
   const [distance, setDistance] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -142,8 +142,8 @@ export default function DistanceGuide() {
   const deviceWidthInCm = windowWidth * 0.0264583333
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <div className="relative w-64 h-64">
+    <div className={`flex flex-col items-center ${compact ? 'space-y-2' : 'space-y-4'}`}>
+      <div className={`relative ${compact ? 'w-full h-full' : 'w-64 h-64'}`}>
         <video
           ref={videoRef}
           autoPlay
@@ -157,43 +157,49 @@ export default function DistanceGuide() {
         />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-2xl">
-            <div className="text-white">Loading face detection...</div>
+            <div className="text-white text-sm">Loading...</div>
           </div>
         )}
       </div>
 
-      <div className="text-center space-y-2">
-        <p className="text-[#1d1d1f] font-medium">Position your device at arm's length</p>
-        <p className="text-sm text-[#86868b]">
-          Hold your device approximately 40 centimeters (16 inches) from your eyes. This is about the length of your arm from
-          elbow to wrist.
-        </p>
+      {!compact && (
+        <div className="text-center space-y-2">
+          <p className="text-[#1d1d1f] font-medium">Position your device at arm's length</p>
+          <p className="text-sm text-[#86868b]">
+            Hold your device approximately 40 centimeters (16 inches) from your eyes. This is about the length of your arm from
+            elbow to wrist.
+          </p>
+        </div>
+      )}
 
-        {distance !== null && (
-          <div className={`bg-[#F3F0FF] p-3 rounded-lg ${
-            Math.abs(distance - 40) <= 5 ? 'bg-[#F0FFF4] text-[#0E9F6E]' : ''
-          }`}>
-            <p className="text-sm font-medium">
-              {Math.abs(distance - 40) <= 5 
-                ? "Perfect distance! ✓"
-                : distance < 40 
-                  ? "Move your device further away ↔"
-                  : "Move your device closer ↔"
-              }
-            </p>
+      {distance !== null && (
+        <div className={`bg-[#F3F0FF] p-2 rounded-lg ${
+          Math.abs(distance - 40) <= 5 ? 'bg-[#F0FFF4] text-[#0E9F6E]' : ''
+        } ${compact ? 'text-xs' : ''}`}>
+          <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
+            {Math.abs(distance - 40) <= 5 
+              ? "Perfect distance! ✓"
+              : distance < 40 
+                ? "Move further ↔"
+                : "Move closer ↔"
+            }
+          </p>
+          {!compact && (
             <p className="text-xs mt-1">
               Current distance: ~{Math.round(distance)}cm
             </p>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
+      {!compact && (
         <div className="bg-[#f2f2f7] p-3 rounded-lg mt-4">
           <p className="text-xs text-[#86868b]">
             Your screen is approximately {deviceWidthInCm.toFixed(1)} cm wide. Make sure you're in a well-lit room and
             wearing any corrective lenses you normally use.
           </p>
         </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -469,13 +469,11 @@ export default function Home() {
         {/* Title Section */}
         <div className="space-y-4 mb-8">
           <h1 className="text-[32px] font-semibold text-[#2C2C2C] tracking-tight">
-            {step === "intro" && "Test Your Vision"}
             {step === "distance" && "Position Device"}
             {step === "test" && "Snellen Test"}
             {step === "results" && "Results"}
           </h1>
           <p className="text-[15px] text-[#666666] leading-relaxed">
-            {step === "intro" && "A simple vision test using letter recognition and voice input"}
             {step === "distance" && "Ensure proper distance for accurate results"}
             {step === "test" && "Speak the letters clearly into your microphone"}
             {step === "results" && "Review your test results"}
@@ -501,7 +499,7 @@ export default function Home() {
                 </p>
                 <MicrophoneSetup onPermissionGranted={handleMicrophonePermission} />
                 <Button
-                  className="w-full"
+                  className="w-full bg-[#6B2FFA] hover:bg-[#5925D9] text-white"
                   onClick={startTest}
                   disabled={!micPermissionGranted}
                 >
@@ -525,6 +523,13 @@ export default function Home() {
                   Continue <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
+            </div>
+          )}
+
+          {/* Distance Guide - Fixed to viewport */}
+          {step === "test" && (
+            <div className="fixed top-4 left-4 z-50 w-[200px] bg-[#F5F5F5] rounded-lg overflow-hidden shadow-lg">
+              <DistanceGuide compact={true} />
             </div>
           )}
 
