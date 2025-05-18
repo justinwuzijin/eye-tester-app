@@ -14,25 +14,21 @@ import MicrophoneSetup from "@/components/microphone-setup"
 const generateRandomPosition = () => {
   // Calculate distances based on viewport size
   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1000
-  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight - 250 : 800  // Subtract space for controls
   
   // Center coordinates
   const centerX = viewportWidth / 2
-  const centerY = viewportHeight / 2
+  const centerY = (viewportHeight / 2) - 50  // Move center point up slightly
   
-  // Calculate minimum and maximum distances from center
-  const minDistance = Math.min(viewportWidth, viewportHeight) * 0.4  // Start at 40% of screen size
-  const maxDistance = Math.min(viewportWidth, viewportHeight) * 0.45 // Max at 45% of screen size
+  // Use maximum possible distance (almost to screen edge)
+  const distance = (viewportWidth / 2) * 0.9  // 90% of half screen width
   
-  // Random angle in radians
-  const angle = Math.random() * 2 * Math.PI
-  
-  // Random distance between min and max
-  const distance = minDistance + Math.random() * (maxDistance - minDistance)
+  // Generate position on either far left or far right
+  const isRightSide = Math.random() < 0.5
   
   // Calculate position
-  const x = centerX + distance * Math.cos(angle)
-  const y = centerY + distance * Math.sin(angle)
+  const x = isRightSide ? centerX + distance : centerX - distance
+  const y = centerY + (Math.random() - 0.5) * (viewportHeight * 0.3)  // Small vertical variation (±15% of height)
   
   return { x, y }
 }
@@ -44,7 +40,7 @@ const generateRandomLetter = () => {
 }
 
 // Initial font sizes in pixels for the first three levels
-const INITIAL_SIZES = [72, 48, 36, 24, 18]  // Starting larger for peripheral vision
+const INITIAL_SIZES = [36, 24, 18, 14, 12]  // Even smaller sizes for peripheral vision
 
 // Get size for current level (continues reducing by 25% after initial sizes)
 const getSizeForLevel = (level: number) => {
@@ -63,6 +59,10 @@ const LEVEL_COLORS = [
   { bg: '#F0FFF4', text: '#0E9F6E' },
   { bg: '#FFF5F5', text: '#E02424' }
 ]
+
+// Constants for test structure
+const TOTAL_TRIALS = 6
+const MAX_ATTEMPTS_PER_TRIAL = 2
 
 export default function PeripheralTest() {
   const [step, setStep] = useState<"intro" | "distance" | "test" | "results">("intro")
@@ -98,6 +98,7 @@ export default function PeripheralTest() {
       // Reset states first
       setIsListening(false)
       setMicStatus("inactive")
+      await new Promise(resolve => setTimeout(resolve, 100))  // Small delay to ensure state is reset
       
       // Request microphone permission explicitly
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -320,16 +321,16 @@ export default function PeripheralTest() {
   }
 
   const handleVoiceResult = async (transcript: string) => {
-    // IMMEDIATELY stop listening and deactivate microphone
+    // First deactivate the microphone and ensure we're not listening
     await deactivateMicrophone()
+    setIsListening(false)
+    setMicStatus("inactive")
     
+    // Set the transcript and normalize it
+    setLastTranscript(transcript)
     const normalizedTranscript = transcript.toLowerCase().replace(/\s+/g, '')
     const isCorrect = normalizedTranscript.includes(currentLetter.toLowerCase())
-    setLastTranscript(transcript)
     
-    // Add extra delay to ensure complete cleanup
-    await new Promise(resolve => setTimeout(resolve, 500))
-
     // Always update total attempts
     setResults((prev) => ({
       correct: isCorrect ? prev.correct + 1 : prev.correct,
@@ -341,45 +342,16 @@ export default function PeripheralTest() {
       
       // Continue to next level
       const nextLevel = currentLevel + 1
-      setCurrentLevel(nextLevel)
-      setCurrentLetter(generateRandomLetter())
-      setCurrentPosition(generateRandomPosition())
-      setProgress(Math.min((nextLevel / INITIAL_SIZES.length) * 100, 100))
       
-      // Ensure microphone is off and speak
-      await speakText(formatSpeech("Good job! Next letter."))
-      
-      // Wait for a moment after speech
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Now safe to activate microphone
-      await activateMicrophone()
-      
-    } else {
-      setFailedAttempts(prev => prev + 1)
-      
-      if (failedAttempts === 0) {
-        // First failure - give another try
-        setCurrentLetter(generateRandomLetter())
-        setCurrentPosition(generateRandomPosition())
-        
-        // Ensure microphone is off and speak
-        await speakText(formatSpeech("Let's try one more time with this size."))
-        
-        // Wait for a moment after speech
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Now safe to activate microphone
-        await activateMicrophone()
-        
-      } else {
-        // Second failure - end test
+      // Check if we've completed all trials
+      if (nextLevel >= TOTAL_TRIALS) {
+        // End test with success
         setStep("results")
         const score = Math.round((results.correct / results.total) * 100)
         let resultMessage = ""
         
         if (score >= 80) {
-          resultMessage = "Excellent peripheral vision! You spotted letters up to very small sizes."
+          resultMessage = "Excellent peripheral vision! You successfully identified letters in your side vision."
         } else if (score >= 60) {
           resultMessage = "Good effort! A quick check with an eye doctor might help improve your side vision."
         } else {
@@ -387,6 +359,86 @@ export default function PeripheralTest() {
         }
         
         await speakText(formatSpeech(`All done! ${resultMessage}`))
+        return
+      }
+      
+      // Continue to next trial
+      setCurrentLevel(nextLevel)
+      const newLetter = generateRandomLetter()
+      const newPosition = generateRandomPosition()
+      setCurrentLetter(newLetter)
+      setCurrentPosition(newPosition)
+      setProgress((nextLevel / TOTAL_TRIALS) * 100)
+      
+      // Speak feedback and wait
+      await speakText(formatSpeech("Good job! Next letter."))
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Start next round with fresh state
+      setIsListening(false)
+      setMicStatus("inactive")
+      await new Promise(resolve => setTimeout(resolve, 100))
+      activateMicrophone()
+    } else {
+      // Increment wrong attempts
+      const newFailedAttempts = failedAttempts + 1
+      setFailedAttempts(newFailedAttempts)
+      
+      if (newFailedAttempts >= MAX_ATTEMPTS_PER_TRIAL) {
+        // Move to next trial after max attempts
+        const nextLevel = currentLevel + 1
+        
+        if (nextLevel >= TOTAL_TRIALS) {
+          // End test if we've completed all trials
+          setStep("results")
+          const score = Math.round((results.correct / results.total) * 100)
+          let resultMessage = ""
+          
+          if (score >= 80) {
+            resultMessage = "Good peripheral vision! You identified most letters successfully."
+          } else if (score >= 60) {
+            resultMessage = "Your peripheral vision might need some attention. Consider consulting an eye doctor."
+          } else {
+            resultMessage = "It seems you had difficulty with side vision. We recommend consulting an eye doctor."
+          }
+          
+          await speakText(formatSpeech(`All done! ${resultMessage}`))
+        } else {
+          // Continue to next trial
+          setCurrentLevel(nextLevel)
+          setFailedAttempts(0)
+          const newLetter = generateRandomLetter()
+          const newPosition = generateRandomPosition()
+          setCurrentLetter(newLetter)
+          setCurrentPosition(newPosition)
+          setProgress((nextLevel / TOTAL_TRIALS) * 100)
+          
+          // Give feedback and wait
+          await speakText(formatSpeech("Let's try the next letter."))
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Start next attempt with fresh state
+          setIsListening(false)
+          setMicStatus("inactive")
+          await new Promise(resolve => setTimeout(resolve, 100))
+          activateMicrophone()
+        }
+      } else {
+        // Still have attempts remaining - try again
+        const newLetter = generateRandomLetter()
+        const newPosition = generateRandomPosition()
+        setCurrentLetter(newLetter)
+        setCurrentPosition(newPosition)
+        
+        // Give feedback and wait
+        await speakText(formatSpeech("Let's try one more time."))
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Start next attempt with fresh state
+        setIsListening(false)
+        setMicStatus("inactive")
+        await new Promise(resolve => setTimeout(resolve, 100))
+        activateMicrophone()
       }
     }
   }
@@ -501,41 +553,44 @@ export default function PeripheralTest() {
             )}
 
             {step === "test" && (
-              <div className="relative w-full h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-                {/* Center dot */}
-                <div 
-                  className="absolute w-4 h-4 rounded-full bg-[#6B2FFA] dark:bg-purple-300"
-                  style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
-                ></div>
-                
-                {/* Peripheral letter */}
-                {currentLetter && currentPosition && (
+              <div className="relative w-full h-[60vh] bg-white dark:bg-gray-900 flex items-center justify-center">
+                {/* Test Area - Restrict height */}
+                <div className="relative w-full h-full">
+                  {/* Center dot */}
                   <div 
-                    className="absolute font-bold text-[#2C2C2C] dark:text-gray-200"
-                    style={{
-                      left: currentPosition.x,
-                      top: currentPosition.y,
-                      transform: 'translate(-50%, -50%)',
-                      fontSize: `${getSizeForLevel(currentLevel)}px`
-                    }}
-                  >
-                    {currentLetter}
-                  </div>
-                )}
+                    className="absolute w-4 h-4 rounded-full bg-[#6B2FFA] dark:bg-purple-300"
+                    style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+                  ></div>
+                  
+                  {/* Peripheral letter */}
+                  {currentLetter && currentPosition && (
+                    <div 
+                      className="absolute font-bold text-[#2C2C2C] dark:text-gray-200"
+                      style={{
+                        left: currentPosition.x,
+                        top: currentPosition.y,
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: `${getSizeForLevel(currentLevel)}px`
+                      }}
+                    >
+                      {currentLetter}
+                    </div>
+                  )}
 
-                {/* Score display */}
-                <div className="absolute top-4 right-4">
-                  <div className="text-[14px] font-medium text-[#2C2C2C] dark:text-gray-200">
-                    Score: {results.correct}/{results.total}
-                    {results.total > 0 && (
-                      <span className="ml-2 text-[#666666] dark:text-gray-400">
-                        ({Math.round((results.correct / results.total) * 100)}%)
-                      </span>
-                    )}
+                  {/* Score display */}
+                  <div className="absolute top-4 right-4">
+                    <div className="text-[14px] font-medium text-[#2C2C2C] dark:text-gray-200">
+                      Score: {results.correct}/{results.total}
+                      {results.total > 0 && (
+                        <span className="ml-2 text-[#666666] dark:text-gray-400">
+                          ({Math.round((results.correct / results.total) * 100)}%)
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Bottom Controls Section */}
+                {/* Bottom Controls Section - Fixed at bottom */}
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-[600px] space-y-4">
                   {/* Voice Recognition */}
                   <div className="w-full">
@@ -560,7 +615,7 @@ export default function PeripheralTest() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[12px] text-[#666666] dark:text-gray-400">Progress</span>
                         <span className="text-[12px] font-medium text-[#6B2FFA] dark:text-purple-300">
-                          Level {currentLevel + 1} of {INITIAL_SIZES.length}
+                          Level {currentLevel + 1} of {TOTAL_TRIALS}
                         </span>
                       </div>
                       <Progress 

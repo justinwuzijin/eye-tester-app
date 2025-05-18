@@ -108,6 +108,7 @@ const getVisionQuality = (sizeIndex: number) => {
 
 export default function Home() {
   const [step, setStep] = useState<"intro" | "distance" | "test" | "results">("intro")
+  const [currentLogo, setCurrentLogo] = useState<"logo" | "jamblink1" | "jamblink2">("logo")
   const [currentString, setCurrentString] = useState("")
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0) // Start with largest size (20/200)
   const [results, setResults] = useState<{ prescription: string; lastCorrectIndex: number }>({
@@ -129,6 +130,55 @@ export default function Home() {
   const defaultPitch = useRef<number>(1.0)
   const activationSound = useRef<HTMLAudioElement | null>(null)
   const deactivationSound = useRef<HTMLAudioElement | null>(null)
+
+  // Logo blinking effect
+  useEffect(() => {
+    if (step !== "intro") return;
+
+    // Function to perform one blink cycle
+    const doBlink = () => {
+      // Quick transition to first blink state
+      setCurrentLogo("jamblink1");
+      
+      // After 100ms, transition to closed eye
+      setTimeout(() => {
+        setCurrentLogo("jamblink2");
+        
+        // After another 100ms, go directly back to open
+        setTimeout(() => {
+          setCurrentLogo("logo");
+        }, 100);
+      }, 100);
+    };
+
+    // Function to schedule next blink with random interval
+    const scheduleNextBlink = () => {
+      // Random interval between 500ms (0.5s) and 5000ms (5s)
+      const nextBlinkDelay = Math.random() * 4500 + 500;
+      return setTimeout(doBlink, nextBlinkDelay);
+    };
+
+    // Function to handle continuous random blinking
+    const startRandomBlinking = () => {
+      doBlink(); // Initial blink
+      let timeoutId = scheduleNextBlink();
+
+      // Set up recurring random intervals
+      const intervalId = setInterval(() => {
+        clearTimeout(timeoutId);
+        timeoutId = scheduleNextBlink();
+      }, 5000); // Ensure new blink is scheduled at least every 5s
+
+      // Return cleanup function
+      return () => {
+        clearInterval(intervalId);
+        clearTimeout(timeoutId);
+        setCurrentLogo("logo");
+      };
+    };
+
+    return startRandomBlinking();
+  }, [step]);
 
   useEffect(() => {
     // Initialize activation and deactivation sounds
@@ -486,14 +536,16 @@ export default function Home() {
           {step === "intro" && (
             <Card className="w-full max-w-lg p-6 space-y-6 text-center">
               <div className="flex flex-col items-center space-y-6">
-                <Image
-                  src="/logo.png"
-                  alt="4Sight Logo"
-                  width={250}
-                  height={250}
-                  priority
-                  className="mb-4"
-                />
+                <div className="relative w-[250px] h-[250px]">
+                  <Image
+                    src={currentLogo === "logo" ? "/logo.png" : `/${currentLogo}.PNG`}
+                    alt="4Sight Logo"
+                    fill
+                    style={{ objectFit: 'contain' }}
+                    priority
+                    className="transition-opacity duration-300"
+                  />
+                </div>
                 <h1 className="text-3xl font-bold tracking-tighter">Welcome to 4Sight</h1>
                 <p className="text-muted-foreground">
                   Your personal vision testing assistant. Let's check your vision together.

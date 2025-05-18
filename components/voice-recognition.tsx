@@ -181,6 +181,8 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
       'cue': 'q',
       'double u': 'w',
       'double you': 'w',
+      'loveu': 'w',
+      'love u': 'w',
       'ex': 'x',
       'exe': 'x',
       'zee': 'z',
@@ -237,8 +239,8 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
         
         // Stop listening and process result
         isProcessingResult.current = true
-        setIsListening(false)
         stopRecognition()
+        setIsListening(false)  // Ensure listening state is updated
         onResult(processedTranscript)
       }
 
@@ -274,16 +276,15 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
       recognitionInstance.onend = () => {
         console.log("Speech recognition ended")
         
-        // Only restart if we're explicitly supposed to be listening
+        // Only restart if we're explicitly supposed to be listening and not processing a result
         if (isListening && !isProcessingResult.current && !recognitionStarting.current) {
           console.log("Restarting recognition...")
-          setTimeout(() => {
-            startRecognition()
-          }, 500)
+          startRecognition()
         } else {
           // Ensure we clean up properly
           cleanupAudioVisualization()
           isProcessingResult.current = false
+          setIsListening(false)  // Ensure listening state is updated
         }
       }
 
