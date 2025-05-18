@@ -384,7 +384,7 @@ export default function Home() {
                       Try Peripheral Test →
                     </a>
                     <a 
-                      href="/gaze-tester/index.html"
+                      href="/gaze-tester"
                       className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
                     >
                       Try Gaze Test →

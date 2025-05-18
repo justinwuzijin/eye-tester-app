@@ -1,51 +1,126 @@
 html, body {
     margin: 0;
     padding: 0;
-    height: 100%;
-    overflow: hidden;
-    background-color: #121212;
-  }
-  
-  canvas {
-    display: block;
-    position: absolute;
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #FFFFFF, #FAFAFA) !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Ensure no other elements set a background that covers our gradient */
+html *, body * {
+    background-color: transparent;
+}
+
+canvas {
+    position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1;
-  }
-  
-  #calibrationContainer {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    background: transparent !important;
+}
+
+#calibrationContainer {
     position: absolute;
     width: 100vw;
     height: 100vh;
     z-index: 100;
-  }
-  
-  .calibrationDot {
+    background: transparent;
+}
+
+.calibrationDot {
     position: absolute;
-    width: 25px;
-    height: 25px;
-    background-color: red;
+    width: 40px;
+    height: 40px;
+    background: radial-gradient(circle, #6B2FFA 0%, #8B5FFA 100%);
     border-radius: 50%;
     cursor: pointer;
     transform: translate(-50%, -50%);
-  }
-  
-  /* Position the webgazer video */
-  #webgazerVideoContainer {
-    position: fixed !important;
-    top: 20px !important;
-    left: 20px !important;
-    right: auto !important;
-    z-index: 1000 !important;
-    display: block !important;
-  }
-  
-  #webgazerVideoFeed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, background 0.3s ease;
+}
+
+.calibrationDot:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.calibrationDot:active {
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+.clickCounter {
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    pointer-events: none;
+}
+
+/* Position the webgazer video */
+#webgazerVideoContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 320px;
+    height: 240px;
+    z-index: 50;
+    background: transparent;
+}
+
+#webgazerVideoFeed {
     width: 100% !important;
     height: 100% !important;
     transform: scale(-1, 1);
-  }
+}
+
+.stats {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 14px;
+    color: #2C2C2C;
+}
+
+.calibration-instructions {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 300px;
+    font-size: 14px;
+    color: #666666;
+}
+
+button {
+    background: #6B2FFA;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 1rem;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+button:hover {
+    background: #5925D9;
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(1px);
+}
   

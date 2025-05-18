@@ -3,27 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gaze Tracker Test</title>
+  <title>Gaze Tracking Test</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Follow the Moving Object with Your Eyes</h1>
+  <div id="webgazerVideoContainer"></div>
   <canvas id="gazeCanvas"></canvas>
-  <div id="calibrationContainer">
-    <!-- 9-point grid: top-left to bottom-right -->
-    <div class="calibrationDot" style="top: 5%; left: 5%;"></div>
-    <div class="calibrationDot" style="top: 5%; left: 45%;"></div>
-    <div class="calibrationDot" style="top: 5%; left: 85%;"></div>
   
-    <div class="calibrationDot" style="top: 45%; left: 5%;"></div>
-    <div class="calibrationDot" style="top: 45%; left: 45%;"></div>
-    <div class="calibrationDot" style="top: 45%; left: 85%;"></div>
-  
-    <div class="calibrationDot" style="top: 85%; left: 5%;"></div>
-    <div class="calibrationDot" style="top: 85%; left: 45%;"></div>
-    <div class="calibrationDot" style="top: 85%; left: 85%;"></div>
+  <div class="stats">
+    <div>FPS: <span id="fps">0</span></div>
+    <div>Accuracy: <span id="accuracy">0</span>%</div>
   </div>
-  
+
+  <div class="calibration-instructions">
+    <p id="calibration-message">Look at the purple dot and click it.</p>
+    <p id="calibration-count">Calibration Point: 1/9</p>
+    <button id="startTest" style="display: none;">Start Test</button>
+  </div>
+
+  <!-- Audio elements -->
+  <audio id="clickSound" src="/gaze-tester/sounds/click.wav" preload="auto"></audio>
+  <audio id="countdownSound" src="/gaze-tester/sounds/312countdown.wav" preload="auto"></audio>
+
+  <div id="calibrationContainer"></div>
+
   <!-- Load WebGazer -->
   <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
   <!-- Your tracker logic -->
