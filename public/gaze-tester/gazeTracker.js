@@ -249,7 +249,39 @@ function animate(timestamp) {
             const accuracy = calculateAccuracy();
             console.log("Tracking data points:", trackingData.length);
             console.log("Final accuracy:", accuracy);
-            alert(`Tracking test complete! Accuracy: ${accuracy}%`);
+            
+            // Calculate average reaction time from tracking data
+            let totalReactionTime = 0;
+            let reactionSamples = 0;
+            
+            for (let i = 1; i < trackingData.length; i++) {
+                const prevPoint = trackingData[i - 1];
+                const currentPoint = trackingData[i];
+                
+                // If there was a significant change in target position
+                const targetMoved = Math.sqrt(
+                    Math.pow(currentPoint.target.x - prevPoint.target.x, 2) +
+                    Math.pow(currentPoint.target.y - prevPoint.target.y, 2)
+                ) > 10;
+                
+                if (targetMoved) {
+                    // Time until gaze caught up with target
+                    const gazeDelay = currentPoint.timestamp - prevPoint.timestamp;
+                    totalReactionTime += gazeDelay;
+                    reactionSamples++;
+                }
+            }
+            
+            const averageReactionTime = reactionSamples > 0 
+                ? (totalReactionTime / reactionSamples / 1000).toFixed(2) // Convert to seconds
+                : 0.5; // Default if no samples
+            
+            // Store results in localStorage
+            localStorage.setItem('gazeAccuracy', `${accuracy}%`);
+            localStorage.setItem('reactionTime', `${averageReactionTime}s`);
+            
+            // Redirect to results page
+            window.location.href = '/gaze-tester/results';
         } else {
             const pathPos = testPath[pathIndex];
             circle.x = pathPos.x;

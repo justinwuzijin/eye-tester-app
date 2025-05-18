@@ -120,6 +120,7 @@ export default function Home() {
   const [micPermissionGranted, setMicPermissionGranted] = useState(false)
   const [wrongAttempts, setWrongAttempts] = useState(0)  // Track wrong attempts at current level
   const [micStatus, setMicStatus] = useState<"inactive" | "active" | "error">("inactive")
+  const [isCorrectDistance, setIsCorrectDistance] = useState(false)
   const router = useRouter()
   const synth = useRef<SpeechSynthesis | null>(null)
   const defaultVoice = useRef<SpeechSynthesisVoice | null>(null)
@@ -513,14 +514,22 @@ export default function Home() {
           {step === "distance" && (
             <div>
               <div className="px-8 py-10 bg-white">
-                <DistanceGuide />
+                <DistanceGuide onDistanceChange={(distance) => {
+                  // Enable button only when distance is within 5cm of target (40cm)
+                  setIsCorrectDistance(distance !== null && Math.abs(distance - 40) <= 5);
+                }} />
               </div>
               <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
                 <Button
                   onClick={startLetterTest}
-                  className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                  disabled={!isCorrectDistance}
+                  className={`${
+                    isCorrectDistance 
+                      ? 'bg-[#6B2FFA] hover:bg-[#5925D9]' 
+                      : 'bg-gray-400 cursor-not-allowed'
+                  } text-white rounded-lg px-4 py-2 text-[14px] font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap`}
                 >
-                  Continue <ArrowRight className="ml-2 h-4 w-4" />
+                  Continue <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>

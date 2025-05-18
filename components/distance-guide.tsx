@@ -3,7 +3,13 @@
 import { useState, useEffect, useRef } from "react"
 import * as faceapi from 'face-api.js'
 
-export default function DistanceGuide({ compact = false }: { compact?: boolean }) {
+export default function DistanceGuide({ 
+  compact = false,
+  onDistanceChange
+}: { 
+  compact?: boolean;
+  onDistanceChange?: (distance: number | null) => void;
+}) {
   const [windowWidth, setWindowWidth] = useState(0)
   const [distance, setDistance] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -117,6 +123,10 @@ export default function DistanceGuide({ compact = false }: { compact?: boolean }
         const faceWidth = detection.box.width
         const estimatedDistance = estimateDistance(faceWidth)
         setDistance(estimatedDistance)
+        // Call onDistanceChange prop if provided
+        if (onDistanceChange) {
+          onDistanceChange(estimatedDistance)
+        }
 
         // Draw face box
         ctx.strokeStyle = '#6B2FFA'
@@ -129,6 +139,10 @@ export default function DistanceGuide({ compact = false }: { compact?: boolean }
         )
       } else {
         setDistance(null)
+        // Call onDistanceChange prop with null if provided
+        if (onDistanceChange) {
+          onDistanceChange(null)
+        }
       }
 
       // Request next frame
@@ -172,25 +186,32 @@ export default function DistanceGuide({ compact = false }: { compact?: boolean }
         </div>
       )}
 
-      {distance !== null && (
-        <div className={`bg-[#F3F0FF] p-2 rounded-lg ${
-          Math.abs(distance - 40) <= 5 ? 'bg-[#F0FFF4] text-[#0E9F6E]' : ''
-        } ${compact ? 'text-xs' : ''}`}>
-          <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-            {Math.abs(distance - 40) <= 5 
-              ? "Perfect distance! ✓"
-              : distance < 40 
-                ? "Move further ↔"
-                : "Move closer ↔"
-            }
-          </p>
-          {!compact && (
-            <p className="text-xs mt-1">
-              Current distance: ~{Math.round(distance)}cm
+      <div className={`bg-[#F3F0FF] p-2 rounded-lg ${
+        distance !== null && Math.abs(distance - 40) <= 5 ? 'bg-[#F0FFF4] text-[#0E9F6E]' : ''
+      } ${compact ? 'text-xs' : ''}`}>
+        {distance === null ? (
+          <div className="space-y-1">
+            <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>Face not detected 👀</p>
+            <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-600`}>Please ensure your face is visible</p>
+          </div>
+        ) : (
+          <>
+            <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
+              {Math.abs(distance - 40) <= 5 
+                ? "Perfect distance! ✓"
+                : distance < 40 
+                  ? "Move further ↔"
+                  : "Move closer ↔"
+              }
             </p>
-          )}
-        </div>
-      )}
+            {!compact && (
+              <p className="text-xs mt-1">
+                Current distance: ~{Math.round(distance)}cm
+              </p>
+            )}
+          </>
+        )}
+      </div>
 
       {!compact && (
         <div className="bg-[#f2f2f7] p-3 rounded-lg mt-4">
