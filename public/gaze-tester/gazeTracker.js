@@ -25,74 +25,76 @@ window.onload = async () => {
         resizeTimeout = setTimeout(resizeCanvas, 100);
     });
   
-    // Initialize webgazer with performance settings
-    await webgazer.setRegression('ridge')
+    try {
+        // Initialize webgazer with performance settings
+        await webgazer.setRegression('ridge')
             .setTracker('TFFacemesh')
             .begin();
             
-    // Configure WebGazer to show eye features
-    Object.assign(webgazer.params, {
-        showVideo: true,
-        showFaceOverlay: true,
-        showFaceFeedbackBox: true,
-        showPredictionPoints: false,
-        trackEyes: true,
-        showEyePatches: true,  // Show the eye patches for debugging
-        camConstraints: { 
-            video: { 
-                width: { min: 320, ideal: 640, max: 1280 },
-                height: { min: 240, ideal: 480, max: 720 },
-                facingMode: "user"
+        // Configure WebGazer to show eye features
+        Object.assign(webgazer.params, {
+            showVideo: true,
+            showFaceOverlay: true,
+            showFaceFeedbackBox: true,
+            showPredictionPoints: false,
+            trackEyes: true,
+            showEyePatches: true,
+            camConstraints: { 
+                video: { 
+                    width: { min: 320, ideal: 640, max: 1280 },
+                    height: { min: 240, ideal: 480, max: 720 },
+                    facingMode: "user"
+                }
             }
+        });
+
+        // Set up the video feed with proper sizing
+        const videoFeed = document.getElementById('webgazerVideoFeed');
+        if (videoFeed) {
+            videoFeed.style.width = '320px';
+            videoFeed.style.height = '240px';
         }
-    });
 
-    // Ensure video is visible and positioned correctly
-    webgazer.showVideo(true);
-    webgazer.showFaceOverlay(true);
-    webgazer.showFaceFeedbackBox(true);
-    
-    // Set up the video feed with proper sizing
-    const videoFeed = document.getElementById('webgazerVideoFeed');
-    if (videoFeed) {
-        videoFeed.style.width = '320px';
-        videoFeed.style.height = '240px';
-    }
+        // Remove any inline styles that might interfere with our CSS
+        const video = document.getElementById('webgazerVideoContainer');
+        if (video) {
+            video.style.width = '320px';
+            video.style.height = '240px';
+        }
 
-    // Remove any inline styles that might interfere with our CSS
-    const video = document.getElementById('webgazerVideoContainer');
-    if (video) {
-        video.style.width = '320px';
-        video.style.height = '240px';
-    }
-  
-    startAnimation();
-
-    // Add after WebGazer initialization
-    await webgazer.setGazeListener((data, elapsedTime) => {
-        if (data == null) return;
-        
-        // Get raw gaze prediction
-        const x = data.x;
-        const y = data.y;
-        
-        // Update gaze positions with smoothing
-        if (x && y) {
-            if (currentGaze.left.x === null) {
-                currentGaze.left = { x: x, y: y };
-                currentGaze.right = { x: x, y: y };
-            } else {
-                // Apply smoothing
-                const smoothingFactor = 0.8;
-                currentGaze.left.x = currentGaze.left.x * smoothingFactor + x * (1 - smoothingFactor);
-                currentGaze.left.y = currentGaze.left.y * smoothingFactor + y * (1 - smoothingFactor);
-                currentGaze.right.x = currentGaze.right.x * smoothingFactor + x * (1 - smoothingFactor);
-                currentGaze.right.y = currentGaze.right.y * smoothingFactor + y * (1 - smoothingFactor);
+        // Add gaze listener
+        await webgazer.setGazeListener((data, elapsedTime) => {
+            if (data == null) return;
+            
+            // Get raw gaze prediction
+            const x = data.x;
+            const y = data.y;
+            
+            // Update gaze positions with smoothing
+            if (x && y) {
+                if (currentGaze.left.x === null) {
+                    currentGaze.left = { x: x, y: y };
+                    currentGaze.right = { x: x, y: y };
+                } else {
+                    // Apply smoothing
+                    const smoothingFactor = 0.8;
+                    currentGaze.left.x = currentGaze.left.x * smoothingFactor + x * (1 - smoothingFactor);
+                    currentGaze.left.y = currentGaze.left.y * smoothingFactor + y * (1 - smoothingFactor);
+                    currentGaze.right.x = currentGaze.right.x * smoothingFactor + x * (1 - smoothingFactor);
+                    currentGaze.right.y = currentGaze.right.y * smoothingFactor + y * (1 - smoothingFactor);
+                }
             }
-        }
-    });
+        });
+
+        startAnimation();
+        // Start with first calibration point
+        showNextCalibrationPoint();
+
+    } catch (err) {
+        console.error('Error initializing webgazer:', err);
+    }
 };
-  
+
 let currentGaze = {
     left: { x: null, y: null },
     right: { x: null, y: null }
@@ -220,7 +222,11 @@ function animate(timestamp) {
     // Don't clear or draw anything during countdown
     if (!isTrackingTest && !isCalibrating) return;
 
-    ctx.fillStyle = '#121212';
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#FFFFFF');
+    gradient.addColorStop(1, '#FAFAFA');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (isTrackingTest) {
@@ -268,18 +274,22 @@ function animate(timestamp) {
                     Math.round(100 * (1 - Math.pow(currentDeviation / maxErrorDistance, 1.5)))
                 ));
                 
-                // Show current stats
-                ctx.font = "24px Arial";
-                ctx.fillStyle = "white";
-                ctx.textAlign = "left";
-                ctx.fillText(`Current Deviation: ${Math.round(currentDeviation)}px (${deviationPercentage}%)`, 20, 60);
-                ctx.fillText(`Overall Accuracy: ${calculateAccuracy()}%`, 20, 90);
+                // Show stats in bottom right corner
+                ctx.font = "16px Arial";
+                ctx.fillStyle = "#2C2C2C";
+                ctx.textAlign = "right";
+                
+                // Position stats 20px from bottom and right edges
+                const statsY = canvas.height - 80; // Start 80px from bottom
+                ctx.fillText(`Current Deviation: ${Math.round(currentDeviation)}px (${deviationPercentage}%)`, canvas.width - 20, statsY);
+                ctx.fillText(`Overall Accuracy: ${calculateAccuracy()}%`, canvas.width - 20, statsY + 25);
+                ctx.fillText(`FPS: ${currentFps}`, canvas.width - 20, statsY + 50);
             }
 
-            // Show remaining time
+            // Show remaining time in top center
             const remainingSeconds = Math.ceil((trackingDuration - (timestamp - trackingStartTime)) / 1000);
             ctx.font = "48px Arial";
-            ctx.fillStyle = "white";
+            ctx.fillStyle = "#2C2C2C";
             ctx.textAlign = "center";
             ctx.fillText(`${remainingSeconds}`, canvas.width / 2, 60);
         }
@@ -287,7 +297,7 @@ function animate(timestamp) {
         // Draw target circle
         ctx.beginPath();
         ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'cyan';
+        ctx.fillStyle = '#6B2FFA';
         ctx.fill();
 
         // Draw gaze points and lasers
@@ -299,20 +309,14 @@ function animate(timestamp) {
             // Draw gaze points
             ctx.beginPath();
             ctx.arc(currentGaze.left.x, currentGaze.left.y, 6, 0, Math.PI * 2);
-            ctx.fillStyle = 'red';
+            ctx.fillStyle = '#FF4444';
             ctx.fill();
 
             ctx.beginPath();
             ctx.arc(currentGaze.right.x, currentGaze.right.y, 6, 0, Math.PI * 2);
-            ctx.fillStyle = 'red';
+            ctx.fillStyle = '#FF4444';
             ctx.fill();
         }
-
-        // Show FPS
-        ctx.font = "16px Arial";
-        ctx.textAlign = "right";
-        ctx.fillStyle = "white";
-        ctx.fillText(`FPS: ${currentFps}`, canvas.width - 20, 30);
     }
 }
 
@@ -355,31 +359,148 @@ document.querySelectorAll('.calibrationDot').forEach(dot => {
 
 function startCountdown() {
     isCalibrating = false;  // We're done with calibration
+    const container = document.getElementById('calibrationContainer');
     let count = 3;
     
+    // Play the countdown sound once at the start
+    const countdownSound = document.getElementById('countdownSound');
+    countdownSound.currentTime = 0;
+    countdownSound.play();
+    
     function showNumber() {
+        container.innerHTML = `<div class="countdown">${count}</div>`;
+        
+        // Clear the canvas and draw the number
         const canvas = document.getElementById('gazeCanvas');
         const ctx = canvas.getContext('2d');
-        
-        // Clear the canvas
         ctx.fillStyle = '#121212';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Draw the number
         ctx.font = "bold 200px Arial";
         ctx.fillStyle = "white";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(count.toString(), canvas.width / 2, canvas.height / 2);
         
-        count--;
-        
-        if (count >= 0) {
+        if (count > 0) {
+            count--;
             setTimeout(showNumber, 1000);
         } else {
+            container.innerHTML = '';
             startTrackingTest();
         }
     }
     
     showNumber();
 }
+
+// Calibration points configuration
+const calibrationPoints = [
+    { top: '5%', left: '5%' },
+    { top: '5%', left: '45%' },
+    { top: '5%', left: '85%' },
+    { top: '45%', left: '5%' },
+    { top: '45%', left: '45%' },
+    { top: '45%', left: '85%' },
+    { top: '85%', left: '5%' },
+    { top: '85%', left: '45%' },
+    { top: '85%', left: '85%' }
+];
+
+let currentCalibrationPoint = 0;
+let currentClickCount = 0;
+const requiredClicks = 5;
+let calibrationComplete = false;
+let gazeData = [];
+const smoothingFactor = 0.95;
+let lastGazeX = null;
+let lastGazeY = null;
+let isClickEnabled = true;
+
+function showNextCalibrationPoint() {
+    const container = document.getElementById('calibrationContainer');
+    container.innerHTML = ''; // Clear previous dot
+    isClickEnabled = true;
+
+    if (currentCalibrationPoint < calibrationPoints.length) {
+        // Update progress message
+        document.getElementById('calibration-message').textContent = 'Look at the purple dot and click it 5 times.';
+        document.getElementById('calibration-count').textContent = 
+            `Calibration Point: ${currentCalibrationPoint + 1}/${calibrationPoints.length}`;
+
+        // Create new dot
+        const dot = document.createElement('div');
+        dot.className = 'calibrationDot';
+        dot.style.top = calibrationPoints[currentCalibrationPoint].top;
+        dot.style.left = calibrationPoints[currentCalibrationPoint].left;
+        
+        // Add click counter display
+        const clickCounter = document.createElement('div');
+        clickCounter.className = 'clickCounter';
+        clickCounter.textContent = '0/5';
+        dot.appendChild(clickCounter);
+        
+        currentClickCount = 0;
+        
+        dot.onclick = () => {
+            if (!isClickEnabled) return;
+            
+            // Play click sound
+            const clickSound = document.getElementById('clickSound');
+            clickSound.currentTime = 0; // Reset sound to start
+            clickSound.play();
+            
+            currentClickCount++;
+            if (currentClickCount <= requiredClicks) {
+                clickCounter.textContent = `${currentClickCount}/5`;
+                
+                // Update dot appearance based on clicks
+                const progress = currentClickCount / requiredClicks;
+                dot.style.background = `radial-gradient(circle, #6B2FFA ${progress * 100}%, #8B5FFA 100%)`;
+                
+                // Record click for WebGazer
+                webgazer.recordScreenPosition(
+                    dot.offsetLeft + (dot.offsetWidth / 2),
+                    dot.offsetTop + (dot.offsetHeight / 2),
+                    'click'
+                );
+
+                if (currentClickCount === requiredClicks) {
+                    isClickEnabled = false;
+                    setTimeout(() => {
+                        currentCalibrationPoint++;
+                        if (currentCalibrationPoint < calibrationPoints.length) {
+                            showNextCalibrationPoint();
+                        } else {
+                            completeCalibration();
+                        }
+                    }, 300); // Short delay before moving to next point
+                }
+            }
+        };
+
+        container.appendChild(dot);
+    }
+}
+
+function completeCalibration() {
+    calibrationComplete = true;
+    const container = document.getElementById('calibrationContainer');
+    container.innerHTML = ''; // Remove last dot
+
+    // Show alert and start countdown
+    alert('Calibration complete! The test will begin after a countdown.');
+    
+    document.getElementById('calibration-message').textContent = 'Get ready! Test starting...';
+    document.getElementById('calibration-count').style.display = 'none';
+    
+    // Start countdown
+    startCountdown();
+}
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    const canvas = document.getElementById('gazeCanvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
