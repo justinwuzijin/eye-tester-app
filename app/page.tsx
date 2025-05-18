@@ -16,6 +16,31 @@ const generateRandomString = (length: number) => {
   return Array.from({ length }, () => letters[Math.floor(Math.random() * letters.length)]).join('')
 }
 
+// Define Snellen level interface
+interface SnellenLevel {
+  ratio: string;
+  multiplier: number;
+  fontSizePt: number;
+  fontSizePx: number;
+}
+
+// Define Snellen levels from worst to best vision
+const SNELLEN_LEVELS: SnellenLevel[] = [
+  { ratio: "20/200", multiplier: 10, fontSizePt: 40, fontSizePx: 53.3 },
+  { ratio: "20/160", multiplier: 8, fontSizePt: 32, fontSizePx: 42.7 },
+  { ratio: "20/125", multiplier: 6.25, fontSizePt: 25, fontSizePx: 33.3 },
+  { ratio: "20/100", multiplier: 5, fontSizePt: 20, fontSizePx: 26.6 },
+  { ratio: "20/80", multiplier: 4, fontSizePt: 16, fontSizePx: 21.3 },
+  { ratio: "20/63", multiplier: 3.15, fontSizePt: 12.6, fontSizePx: 16.8 },
+  { ratio: "20/50", multiplier: 2.5, fontSizePt: 10, fontSizePx: 13.3 },
+  { ratio: "20/40", multiplier: 2, fontSizePt: 8, fontSizePx: 10.7 },
+  { ratio: "20/32", multiplier: 1.6, fontSizePt: 6.4, fontSizePx: 8.5 },
+  { ratio: "20/25", multiplier: 1.25, fontSizePt: 5, fontSizePx: 6.7 },
+  { ratio: "20/20", multiplier: 1, fontSizePt: 4, fontSizePx: 5.3 }
+]
+
+const getCurrentLevel = (index: number) => SNELLEN_LEVELS[index]
+
 // Initial font sizes in pixels for the first three levels
 const INITIAL_SIZES = [48, 24, 12]
 
@@ -30,10 +55,6 @@ const getSizeForLevel = (level: number) => {
 
 // Color generator for levels beyond initial colors
 const generateColor = (level: number) => {
-  if (level < LEVEL_COLORS.length) {
-    return LEVEL_COLORS[level]
-  }
-  // Generate new colors for additional levels
   const hue = (level * 137.5) % 360 // Golden angle progression for distinct colors
   return {
     bg: `hsl(${hue}, 85%, 97%)`,
@@ -87,14 +108,17 @@ const getVisionQuality = (sizeIndex: number) => {
 export default function Home() {
   const [step, setStep] = useState<"intro" | "distance" | "test" | "results">("intro")
   const [currentString, setCurrentString] = useState("")
-  const [currentSizeIndex, setCurrentSizeIndex] = useState(0)
-  const [results, setResults] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 })
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0) // Start with largest size (20/200)
+  const [results, setResults] = useState<{ prescription: string; lastCorrectIndex: number }>({
+    prescription: SNELLEN_LEVELS[0].ratio, // Start with worst vision
+    lastCorrectIndex: 0
+  })
   const [isListening, setIsListening] = useState(false)
   const [progress, setProgress] = useState(0)
   const [lastTranscript, setLastTranscript] = useState<string>("")
   const [micPermissionGranted, setMicPermissionGranted] = useState(false)
-  const [failedAttempts, setFailedAttempts] = useState(0)  // Track consecutive failures
-  const [micStatus, setMicStatus] = useState<"inactive" | "active" | "error">("inactive")  // New state for mic status
+  const [wrongAttempts, setWrongAttempts] = useState(0)  // Track wrong attempts at current level
+  const [micStatus, setMicStatus] = useState<"inactive" | "active" | "error">("inactive")
   const router = useRouter()
   const synth = useRef<SpeechSynthesis | null>(null)
   const defaultVoice = useRef<SpeechSynthesisVoice | null>(null)
@@ -315,111 +339,112 @@ export default function Home() {
     speakText(formatSpeech("Great! Hold your device at arm's length, about 40 centimeters away. Click continue when ready."))
   }
 
-  const startLetterTest = () => {
+  const startLetterTest = async () => {
+    // First deactivate microphone if it's active
+    if (isListening) {
+      await deactivateMicrophone()
+    }
+
+    // Set initial test state
     setStep("test")
-    setCurrentString(generateRandomString(5))
-    setCurrentSizeIndex(0)
-    setResults({ correct: 0, total: 0 })
-    setProgress(0)
+    const newString = generateRandomString(5) // Generate 5 letters
+    setCurrentString(newString)
+    const level = getCurrentLevel(currentLevelIndex)
+    
+    // Calculate progress as percentage through all levels
+    const progressPercent = (currentLevelIndex / (SNELLEN_LEVELS.length - 1)) * 100
+    setProgress(progressPercent)
+    
+    // Reset attempts for new test
+    setWrongAttempts(0)
     setLastTranscript("")
-    setMicStatus("inactive")  // Reset mic status
     
-    // Start test with voice instruction
-    speakText(formatSpeech("Perfect! Read the letters out loud."))
-    
-    // Activate microphone after instructions
-    setTimeout(() => {
-      activateMicrophone()
-    }, 2000)  // Increased delay to ensure voice instruction completes
+    // Update the letter display immediately
+    const letterElement = document.getElementById('test-letter')
+    if (letterElement) {
+      letterElement.style.fontSize = `${level.fontSizePx}px`
+      const colors = generateColor(currentLevelIndex)
+      letterElement.style.color = colors.text
+      letterElement.parentElement?.style.setProperty('background-color', colors.bg)
+    }
+
+    // Start test with voice instruction and activate mic right after
+    await speakText(formatSpeech("Read these letters"))
+    // Activate microphone immediately after instruction
+    activateMicrophone()
   }
 
   const restartTest = () => {
     setStep("intro")
     setCurrentString("")
-    setCurrentSizeIndex(0)
-    setResults({ correct: 0, total: 0 })
+    setCurrentLevelIndex(0) // Start with largest size
+    setResults({
+      prescription: SNELLEN_LEVELS[0].ratio,
+      lastCorrectIndex: 0
+    })
     setProgress(0)
     setLastTranscript("")
-    setMicStatus("inactive")  // Reset mic status
+    setWrongAttempts(0)
+    setMicStatus("inactive")
     if (synth.current && synth.current.speaking) {
       synth.current.cancel()
     }
   }
 
   const handleVoiceResult = async (transcript: string) => {
-    // IMMEDIATELY stop listening and deactivate microphone
+    // First deactivate the microphone
     await deactivateMicrophone()
     
-    const normalizedTranscript = transcript.toLowerCase().replace(/\s+/g, '')
-    const isCorrect = normalizedTranscript.includes(currentString)
-    setLastTranscript(transcript)
+    setLastTranscript(transcript.toLowerCase())
     
-    // Add extra delay to ensure complete cleanup
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Always update total attempts
-    setResults((prev) => ({
-      correct: isCorrect ? prev.correct + 1 : prev.correct,
-      total: prev.total + 1,
-    }))
-
+    // Remove spaces and convert to lowercase for comparison
+    const normalizedTranscript = transcript.toLowerCase().replace(/\s+/g, '')
+    const normalizedCurrentString = currentString.toLowerCase()
+    const isCorrect = normalizedTranscript === normalizedCurrentString
+    
     if (isCorrect) {
-      setFailedAttempts(0)  // Reset failed attempts on success
+      // Reset wrong attempts when correct
+      setWrongAttempts(0)
       
-      // Continue to next level
-      const nextSizeIndex = currentSizeIndex + 1
-      setCurrentSizeIndex(nextSizeIndex)
-      setCurrentString(generateRandomString(5))
-      setProgress(Math.min((nextSizeIndex / INITIAL_SIZES.length) * 100, 100))
+      // Update results with current level as last correct
+      setResults(prev => ({
+        ...prev,
+        lastCorrectIndex: currentLevelIndex,
+        prescription: SNELLEN_LEVELS[currentLevelIndex].ratio
+      }))
       
-      // Ensure microphone is off and speak
-      await speakText(formatSpeech("Good job! Next row."))
-      
-      // Wait for a moment after speech
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Now safe to activate microphone
-      await activateMicrophone()
-      
-    } else {
-      setFailedAttempts(prev => prev + 1)
-      
-      if (failedAttempts === 0) {
-        // First failure - give another try
-        setCurrentString(generateRandomString(5))  // New letters, same size
-        
-        // Ensure microphone is off and speak
-        await speakText(formatSpeech("Let's try one more time with this size."))
-        
-        // Wait for a moment after speech
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Now safe to activate microphone
-        await activateMicrophone()
-        
+      // Move to next level if not at smallest size
+      if (currentLevelIndex < SNELLEN_LEVELS.length - 1) {
+        setCurrentLevelIndex(prev => prev + 1)
+        await speakText(formatSpeech("Correct"))
+        startLetterTest() // This will handle microphone activation
       } else {
-        // Second failure - end test
+        // Reached the best possible vision level (20/20)
         setStep("results")
-        let resultMessage = ""
-        
-        if (currentSizeIndex >= INITIAL_SIZES.length) {
-          resultMessage = `Impressive! You made it past the standard test to level ${currentSizeIndex + 1}.`
-        } else if (currentSizeIndex >= 2) {
-          resultMessage = "Great results! Your vision looks strong."
-        } else if (currentSizeIndex >= 1) {
-          resultMessage = "Good effort! A quick check with an eye doctor might be helpful."
-        } else {
-          resultMessage = "Thanks for completing the test. I recommend scheduling an eye exam for a thorough check."
-        }
-        
-        const finalScore = Math.round((results.correct / results.total) * 100)
-        await speakText(formatSpeech(`Test complete! Your accuracy was ${finalScore}%. ${resultMessage}`))
+        await speakText(formatSpeech("Congratulations! You've achieved perfect 20/20 vision!"))
+      }
+    } else {
+      // Increment wrong attempts
+      const newWrongAttempts = wrongAttempts + 1
+      setWrongAttempts(newWrongAttempts)
+      
+      if (newWrongAttempts >= 3) {
+        // Failed this level after 3 wrong attempts
+        setStep("results")
+        await speakText(formatSpeech(`Test complete. Your prescription is ${results.prescription}`))
+      } else {
+        // Still have attempts remaining
+        const newString = generateRandomString(5) // Generate new 5 letters
+        setCurrentString(newString)
+        await speakText(formatSpeech(`Try again`))
+        // Activate microphone immediately after feedback
+        activateMicrophone()
       }
     }
   }
 
-  const currentColor = generateColor(currentSizeIndex)
-  const currentSize = getSizeForLevel(currentSizeIndex)
+  // Get current level for display
+  const currentLevel = getCurrentLevel(currentLevelIndex)
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-[#FAFAFA]">
@@ -506,204 +531,169 @@ export default function Home() {
           )}
 
           {step === "test" && (
-            <div>
-              <div className="px-8 py-10 bg-white space-y-8">
-                {/* Level Indicator */}
-                <div className="flex justify-between items-center">
-                  <div 
-                    style={{ backgroundColor: currentColor.bg }}
-                    className="flex items-center space-x-3 py-2 px-4 rounded-lg"
-                  >
-                    <span className="text-[14px] font-medium" style={{ color: currentColor.text }}>
-                      Level {currentSizeIndex + 1}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-[14px] font-medium text-[#2C2C2C]">
-                      Score: {results.correct}/{results.total}
-                      {results.total > 0 && (
-                        <span className="ml-2 text-[#666666]">
-                          ({Math.round((results.correct / results.total) * 100)}%)
-                        </span>
-                      )}
-                    </div>
-                    <a 
-                      href="/peripheral"
-                      className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
-                    >
-                      Try Peripheral Test →
-                    </a>
-                    <a 
-                      href="/gaze-tester"
-                      className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
-                    >
-                      Try Gaze Test →
-                    </a>
-                    <button
-                      onClick={async () => {
-                        try {
-                          if (micStatus === "active") {
-                            await deactivateMicrophone()
-                          } else {
-                            await activateMicrophone()
-                          }
-                        } catch (error) {
-                          console.error("Failed to toggle microphone:", error)
-                          setMicStatus("error")
-                          setIsListening(false)
-                        }
-                      }}
-                      className={`flex items-center space-x-3 py-2 px-4 rounded-lg transition-all duration-200 ${
-                        micStatus === "active"
-                          ? 'bg-[#F3F0FF] text-[#6B2FFA] animate-pulse'
-                          : micStatus === "error"
-                            ? 'bg-[#FFF4E5] text-[#B76E00]'
-                            : 'bg-[#F5F5F5] text-[#2C2C2C]'
-                      }`}
-                      disabled={micStatus === "error"}
-                    >
-                      <Mic className={`h-4 w-4 ${
-                        micStatus === "active" 
-                          ? 'animate-bounce' 
-                          : micStatus === "error" 
-                            ? 'text-[#B76E00]' 
-                            : ''
-                      }`} />
-                      <span className="text-[14px]">
-                        {micStatus === "active"
-                          ? "Listening..." 
-                          : micStatus === "error"
-                            ? "Microphone Error"
-                            : "Click to speak"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Letters Display */}
+            <div className="px-8 py-10 bg-white space-y-8">
+              <div className="flex justify-between items-center">
                 <div 
-                  style={{ backgroundColor: currentColor.bg }}
-                  className="flex flex-col items-center justify-center min-h-[200px] rounded-lg"
+                  style={{ backgroundColor: generateColor(currentLevelIndex).bg }}
+                  className="flex items-center space-x-3 py-2 px-4 rounded-lg"
                 >
-                  <p 
-                    style={{ 
-                      fontSize: `${currentSize}px`,
-                      color: currentColor.text
-                    }} 
-                    className="font-mono tracking-wide"
-                  >
-                    {currentString}
-                  </p>
+                  <span className="text-[14px] font-medium" style={{ color: generateColor(currentLevelIndex).text }}>
+                    Testing {currentLevel.ratio}
+                  </span>
                 </div>
-
-                {/* Voice Recognition */}
-                <VoiceRecognition
-                  onResult={handleVoiceResult}
-                  isListening={isListening}
-                  setIsListening={setIsListening}
-                />
-
-                {/* Transcript */}
-                {lastTranscript && (
-                  <div className="bg-[#F5F5F5] rounded-lg p-4 space-y-2">
-                    <p className="text-[12px] text-[#666666] uppercase tracking-wider">Last heard</p>
-                    <p className="text-[14px] text-[#2C2C2C]">{lastTranscript}</p>
+                <div className="flex items-center space-x-4">
+                  <div className="text-[14px] font-medium text-[#2C2C2C]">
+                    Attempts Remaining: {3 - wrongAttempts}
                   </div>
-                )}
-
-                {/* Progress */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-[#666666]">Progress</span>
-                    <span className="text-[12px] font-medium" style={{ color: currentColor.text }}>
-                      Level {currentSizeIndex + 1} of {INITIAL_SIZES.length}
+                  <a 
+                    href="/peripheral"
+                    className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                  >
+                    Try Peripheral Test →
+                  </a>
+                  <a 
+                    href="/gaze-tester"
+                    className="text-[14px] text-[#6B2FFA] hover:text-[#5925D9] transition-colors"
+                  >
+                    Try Gaze Test →
+                  </a>
+                  {/* Microphone status indicator */}
+                  <div className={`flex items-center space-x-2 py-2 px-4 rounded-lg ${
+                    micStatus === "active"
+                      ? 'bg-[#F3F0FF] text-[#6B2FFA]'
+                      : micStatus === "error"
+                        ? 'bg-[#FFF4E5] text-[#B76E00]'
+                        : 'bg-[#F5F5F5] text-[#2C2C2C]'
+                  }`}>
+                    <Mic className={`h-4 w-4 ${
+                      micStatus === "active" 
+                        ? 'animate-bounce' 
+                        : micStatus === "error" 
+                          ? 'text-[#B76E00]' 
+                          : ''
+                    }`} />
+                    <span className="text-[14px]">
+                      {micStatus === "active"
+                        ? "Listening..." 
+                        : micStatus === "error"
+                          ? "Microphone Error"
+                          : "Waiting..."}
                     </span>
                   </div>
-                  <Progress 
-                    value={progress} 
-                    className="h-1 bg-[#E6E6E6]"
-                    indicatorClassName="bg-[#6B2FFA]"
-                  />
                 </div>
+              </div>
+
+              {/* Letters Display */}
+              <div 
+                style={{ backgroundColor: generateColor(currentLevelIndex).bg }}
+                className="flex flex-col items-center justify-center min-h-[200px] rounded-lg"
+              >
+                <p 
+                  style={{ 
+                    fontSize: `${currentLevel.fontSizePx}px`,
+                    color: generateColor(currentLevelIndex).text
+                  }} 
+                  className="font-mono tracking-wide"
+                >
+                  {currentString}
+                </p>
+              </div>
+
+              {/* Voice Recognition */}
+              <VoiceRecognition
+                onResult={handleVoiceResult}
+                isListening={isListening}
+                setIsListening={setIsListening}
+              />
+
+              {/* Transcript */}
+              {lastTranscript && (
+                <div className="bg-[#F5F5F5] rounded-lg p-4 space-y-2">
+                  <p className="text-[12px] text-[#666666] uppercase tracking-wider">Last heard</p>
+                  <p className="text-[14px] text-[#2C2C2C]">{lastTranscript}</p>
+                </div>
+              )}
+
+              {/* Progress */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] text-[#666666]">Progress</span>
+                  <span className="text-[12px] font-medium" style={{ color: generateColor(currentLevelIndex).text }}>
+                    Level {currentLevelIndex + 1} of {SNELLEN_LEVELS.length}
+                  </span>
+                </div>
+                <Progress 
+                  value={progress} 
+                  className="h-1 bg-[#E6E6E6]"
+                  indicatorClassName="bg-[#6B2FFA]"
+                />
               </div>
             </div>
           )}
 
           {step === "results" && (
-            <div>
-              <div className="px-8 py-10 bg-white space-y-8">
-                <div className="flex items-center justify-center">
-                  <div className="w-32 h-32 rounded-full bg-[#F3F0FF] flex items-center justify-center">
-                    <p className="text-[40px] font-semibold text-[#6B2FFA]">
-                      {Math.round((results.correct / results.total) * 100)}%
-                    </p>
-                  </div>
-                </div>
+            <div className="px-8 py-10 bg-white space-y-8">
+              <div className="text-center space-y-2">
+                <p className="text-[24px] font-semibold text-[#2C2C2C]">
+                  Your Prescription: {results.prescription}
+                </p>
+                <p className="text-[15px] text-[#666666]">
+                  You successfully identified letters down to {SNELLEN_LEVELS[results.lastCorrectIndex].ratio} vision
+                </p>
+              </div>
 
-                <div className="space-y-6">
-                  <div className="text-center space-y-2">
-                    <p className="text-[15px] text-[#666666]">
-                      You correctly identified {results.correct} out of {results.total} letter sets
-                    </p>
-                    <p className="text-[24px] font-semibold text-[#2C2C2C]">
-                      Vision Score: {calculateSnellenRatio(currentSizeIndex)}
+              <div className="grid gap-4">
+                <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
+                  <h3 className="text-[14px] font-medium text-[#2C2C2C]">Test Performance</h3>
+                  <div className="space-y-2">
+                    <p className="text-[14px] text-[#666666]">
+                      • Smallest text size read: {SNELLEN_LEVELS[results.lastCorrectIndex].fontSizePx}px
                     </p>
                     <p className="text-[14px] text-[#666666]">
-                      Vision Quality: <span className="font-medium text-[#6B2FFA]">{getVisionQuality(currentSizeIndex)}</span>
+                      • Completed levels: {results.lastCorrectIndex + 1}
+                    </p>
+                    <p className="text-[14px] text-[#666666]">
+                      • Reading accuracy: {Math.round((results.lastCorrectIndex + 1) / SNELLEN_LEVELS.length * 100)}%
                     </p>
                   </div>
-
-                  <div className="grid gap-4">
-                    <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
-                      <h3 className="text-[14px] font-medium text-[#2C2C2C]">Test Performance</h3>
-                      <div className="space-y-2">
-                        <p className="text-[14px] text-[#666666]">
-                          • Smallest text size read: {getSizeForLevel(currentSizeIndex)}px
-                        </p>
-                        <p className="text-[14px] text-[#666666]">
-                          • Completed levels: {currentSizeIndex + 1}
-                        </p>
-                        <p className="text-[14px] text-[#666666]">
-                          • Reading accuracy: {Math.round((results.correct / results.total) * 100)}%
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
-                      <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
-                      <p className="text-[14px] text-[#666666] leading-relaxed">
-                        {currentSizeIndex >= INITIAL_SIZES.length
-                          ? `Your vision appears to be above average. You successfully read text beyond the standard test size, achieving a ${calculateSnellenRatio(currentSizeIndex)} vision score.`
-                          : currentSizeIndex >= 2
-                            ? `Your vision appears to be within normal range. You achieved a standard ${calculateSnellenRatio(currentSizeIndex)} vision score.`
-                            : currentSizeIndex >= 1
-                              ? `Your vision may need attention. Your current vision score is ${calculateSnellenRatio(currentSizeIndex)}, which suggests mild visual impairment.`
-                              : `Your vision test results indicate a vision score of ${calculateSnellenRatio(currentSizeIndex)}. This suggests significant visual impairment that should be evaluated by an eye care professional.`}
-                      </p>
-                    </div>
-
-                    <div className="bg-[#FFF4E5] p-4 rounded-lg">
-                      <p className="text-[12px] text-[#B76E00] text-center">
-                        This is not a medical diagnosis. Results may vary based on device screen and testing conditions. Please consult an eye care professional for a comprehensive evaluation.
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
-                <div className="px-8 py-6 bg-[#F5F5F5] flex justify-between">
-                  <Button 
-                    onClick={() => router.push('/peripheral')}
-                    className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
-                  >
-                    Try Peripheral Test
-                  </Button>
-                  <Button 
-                    onClick={restartTest} 
-                    className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
-                  >
-                    Test Again
-                  </Button>
+                <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
+                  <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
+                  <p className="text-[14px] text-[#666666] leading-relaxed">
+                    {results.prescription === "20/20"
+                      ? "Congratulations! You've achieved perfect 20/20 vision!"
+                      : results.prescription === "20/25" || results.prescription === "20/32"
+                      ? `Your vision is near normal. You achieved ${results.prescription} vision.`
+                      : results.prescription === "20/40" || results.prescription === "20/50"
+                      ? `Your vision shows mild impairment. Your prescription is ${results.prescription}.`
+                      : results.prescription === "20/63" || results.prescription === "20/80"
+                      ? `Your vision shows moderate impairment. Your prescription is ${results.prescription}.`
+                      : `Your vision shows significant impairment. Your prescription is ${results.prescription}. We recommend consulting an eye care professional.`
+                    }
+                  </p>
                 </div>
+
+                <div className="bg-[#FFF4E5] p-4 rounded-lg">
+                  <p className="text-[12px] text-[#B76E00] text-center">
+                    This is not a medical diagnosis. Results may vary based on device screen and testing conditions. Please consult an eye care professional for a comprehensive evaluation.
+                  </p>
+                </div>
+              </div>
+
+              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-between">
+                <Button 
+                  onClick={() => router.push('/peripheral')}
+                  className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                >
+                  Try Peripheral Test
+                </Button>
+                <Button 
+                  onClick={restartTest} 
+                  className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                >
+                  Test Again
+                </Button>
               </div>
             </div>
           )}
