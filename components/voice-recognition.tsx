@@ -174,6 +174,7 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
       'jay': 'j',
       'eh': 'a',
       'aye': 'a',
+      'hey': 'a',
       'em': 'm',
       'en': 'n',
       'pee': 'p',
@@ -236,6 +237,7 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
         
         // Stop listening and process result
         isProcessingResult.current = true
+        setIsListening(false)
         stopRecognition()
         onResult(processedTranscript)
       }
@@ -272,10 +274,16 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
       recognitionInstance.onend = () => {
         console.log("Speech recognition ended")
         
-        // If we should still be listening and aren't processing a result, restart
+        // Only restart if we're explicitly supposed to be listening
         if (isListening && !isProcessingResult.current && !recognitionStarting.current) {
           console.log("Restarting recognition...")
-          startRecognition()
+          setTimeout(() => {
+            startRecognition()
+          }, 500)
+        } else {
+          // Ensure we clean up properly
+          cleanupAudioVisualization()
+          isProcessingResult.current = false
         }
       }
 

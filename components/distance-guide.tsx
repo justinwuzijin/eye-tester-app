@@ -32,9 +32,9 @@ export default function DistanceGuide() {
       </div>
 
       <div className="text-center space-y-2">
-        <p className="text-[#1d1d1f] font-medium">Position your device at arm's length</p>
+        <p className="text-[#1d1d1f] font-medium">Position your device at half an arm's length</p>
         <p className="text-sm text-[#86868b]">
-          Hold your device approximately 40 cm (16 inches) from your eyes. This is about the length of your arm from
+          Hold your device approximately 20 cm (8 inches) from your eyes. This is about half the length of your arm from
           elbow to wrist.
         </p>
 
