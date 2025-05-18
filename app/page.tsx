@@ -131,9 +131,9 @@ export default function Home() {
   useEffect(() => {
     // Initialize activation and deactivation sounds
     if (typeof window !== "undefined") {
-      activationSound.current = new Audio("/Data_2.wav")
+      activationSound.current = new Audio("/sounds/Data_2.wav")
       activationSound.current.volume = 0.5
-      deactivationSound.current = new Audio("/Data_3.wav")
+      deactivationSound.current = new Audio("/sounds/Data_3.wav")
       deactivationSound.current.volume = 0.5
     }
   }, [])
