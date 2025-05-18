@@ -528,7 +528,7 @@ export default function Home() {
 
           {/* Distance Guide - Fixed to viewport */}
           {step === "test" && (
-            <div className="fixed top-4 left-4 z-50 w-[200px] bg-[#F5F5F5] rounded-lg overflow-hidden shadow-lg">
+            <div className="fixed top-4 left-4 z-50 w-[280px] bg-[#F5F5F5] rounded-lg overflow-hidden shadow-lg">
               <DistanceGuide compact={true} />
             </div>
           )}
@@ -630,6 +630,14 @@ export default function Home() {
                   className="h-1 bg-[#E6E6E6]"
                   indicatorClassName="bg-[#6B2FFA]"
                 />
+                <div className="flex justify-center mt-4">
+                  <Button
+                    onClick={() => setStep("results")}
+                    className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-medium px-6 py-2 rounded-lg transition-colors"
+                  >
+                    Quit Test
+                  </Button>
+                </div>
               </div>
             </div>
           )}
