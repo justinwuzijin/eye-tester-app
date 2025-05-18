@@ -113,6 +113,16 @@ const pathRadius = 200;
 let frameCount = 0;
 let lastFpsUpdate = 0;
 let currentFps = 0;
+let targetImage = new Image();  // Create image object
+
+// Load the target image
+targetImage.src = '/gaze-tester/images/jam.png';
+targetImage.onload = () => {
+    console.log('Target image loaded successfully');
+};
+targetImage.onerror = (err) => {
+    console.error('Error loading target image:', err);
+};
 
 function generateCircularPath() {
     testPath = [];
@@ -197,8 +207,9 @@ function startAnimation() {
 
 function drawLaser(ctx, fromX, fromY, toX, toY) {
     const gradient = ctx.createLinearGradient(fromX, fromY, toX, toY);
-    gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
-    gradient.addColorStop(1, 'rgba(255, 0, 0, 0.2)');
+    gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)'); 
+    gradient.addColorStop(1, 'rgba(116,13,164,255)');
+
     
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
@@ -295,10 +306,11 @@ function animate(timestamp) {
         }
 
         // Draw target circle
-        ctx.beginPath();
-        ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#6B2FFA';
-        ctx.fill();
+        ctx.save();  // Save current context state
+        const imageSize = circle.radius * 8;  // Use circle radius to determine image size
+        ctx.translate(circle.x - imageSize/2, circle.y - imageSize/2);  // Center image at target point
+        ctx.drawImage(targetImage, 0, 0, imageSize, imageSize);
+        ctx.restore();  // Restore context state
 
         // Draw gaze points and lasers
         if (currentGaze.left.x && currentGaze.right.x) {
