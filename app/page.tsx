@@ -121,23 +121,22 @@ export default function Home() {
 
   const activateMicrophone = async () => {
     try {
-      setMicStatus("inactive") // Reset status first
-      setIsListening(false) // Ensure we're starting from a clean state
+      // Reset states first
+      setIsListening(false)
+      setMicStatus("inactive")
       
       // Request microphone permission explicitly
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach(track => track.stop()) // Stop the stream after getting permission
+      stream.getTracks().forEach(track => track.stop())
       
-      // Play activation sound first
+      // Play activation sound and wait for it to complete
+      console.log("Playing activation sound...")
       await playActivationSound()
       
-      // Set states in correct order with proper delays
+      // Set both states together after sound completes
+      console.log("Starting listening...")
       setMicStatus("active")
-      
-      // Short delay before starting recognition to ensure UI updates are visible
-      setTimeout(() => {
-        setIsListening(true)
-      }, 300)
+      setIsListening(true)
       
     } catch (error) {
       console.error('Microphone activation failed:', error)
@@ -148,12 +147,16 @@ export default function Home() {
   }
 
   const deactivateMicrophone = async () => {
+    // Immediately stop listening
     setIsListening(false)
-    await playDeactivationSound()
-    // Small delay before setting inactive status to ensure recognition stops
-    setTimeout(() => {
-      setMicStatus("inactive")
-    }, 100)
+    setMicStatus("inactive")
+    
+    // Play deactivation sound
+    try {
+      await playDeactivationSound()
+    } catch (error) {
+      console.error('Failed to play deactivation sound:', error)
+    }
   }
 
   const playActivationSound = async () => {
@@ -182,34 +185,44 @@ export default function Home() {
 
   const speakText = (text: string): Promise<void> => {
     return new Promise((resolve) => {
-      if (synth.current) {
-        // Cancel any ongoing speech
-        if (synth.current.speaking) {
-          synth.current.cancel()
-        }
-        
-        const utterance = new SpeechSynthesisUtterance(text)
-        
-        // Use the selected default voice
-        if (defaultVoice.current) {
-          utterance.voice = defaultVoice.current
-        }
-        
-        // Faster voice settings
-        utterance.rate = 1.25    // 25% faster speech
-        utterance.pitch = 1.0    // Natural pitch
-        utterance.volume = 0.95  // Comfortable listening level
-        
-        // Add event listener for when speech ends
-        utterance.onend = () => {
-          // Add a longer delay after speech ends before resolving
-          setTimeout(resolve, 1000)  // Increased to 1 second
-        }
-        
-        synth.current.speak(utterance)
-      } else {
-        resolve() // Resolve immediately if no synth available
+      if (!synth.current) {
+        console.warn("Speech synthesis not available")
+        resolve()
+        return
       }
+
+      // Cancel any ongoing speech
+      if (synth.current.speaking) {
+        synth.current.cancel()
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(text)
+      
+      // Use the selected default voice
+      if (defaultVoice.current) {
+        utterance.voice = defaultVoice.current
+      }
+      
+      // Faster voice settings
+      utterance.rate = 1.25    // 25% faster speech
+      utterance.pitch = 1.0    // Natural pitch
+      utterance.volume = 0.95  // Comfortable listening level
+      
+      // Add event listener for when speech ends
+      utterance.onend = () => {
+        console.log("Speech completed:", text)
+        // Add a small safety delay after speech ends
+        setTimeout(resolve, 500)
+      }
+
+      // Also handle errors
+      utterance.onerror = () => {
+        console.error("Speech synthesis error")
+        resolve()
+      }
+      
+      console.log("Starting speech:", text)
+      synth.current.speak(utterance)
     })
   }
 
@@ -334,15 +347,13 @@ export default function Home() {
   }
 
   const handleVoiceResult = async (transcript: string) => {
-    // IMMEDIATELY stop listening before doing anything else
-    setIsListening(false)
+    // IMMEDIATELY stop listening and deactivate microphone
+    await deactivateMicrophone()
     
     const normalizedTranscript = transcript.toLowerCase().replace(/\s+/g, '')
     const isCorrect = normalizedTranscript.includes(currentString)
     setLastTranscript(transcript)
     
-    // Ensure microphone is fully deactivated
-    await deactivateMicrophone()
     // Add extra delay to ensure complete cleanup
     await new Promise(resolve => setTimeout(resolve, 500))
 
@@ -361,11 +372,13 @@ export default function Home() {
       setCurrentString(generateRandomString(5))
       setProgress(Math.min((nextSizeIndex / INITIAL_SIZES.length) * 100, 100))
       
-      // Now safe to do TTS since mic is fully off
+      // Ensure microphone is off and speak
       await speakText(formatSpeech("Good job! Next row."))
-      // Wait for a significant delay after speech
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      // Only now activate the microphone
+      
+      // Wait for a moment after speech
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Now safe to activate microphone
       await activateMicrophone()
       
     } else {
@@ -375,11 +388,13 @@ export default function Home() {
         // First failure - give another try
         setCurrentString(generateRandomString(5))  // New letters, same size
         
-        // Now safe to do TTS since mic is fully off
+        // Ensure microphone is off and speak
         await speakText(formatSpeech("Let's try one more time with this size."))
-        // Wait for a significant delay after speech
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        // Only now activate the microphone
+        
+        // Wait for a moment after speech
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Now safe to activate microphone
         await activateMicrophone()
         
       } else {
@@ -525,15 +540,21 @@ export default function Home() {
                       Try Gaze Test →
                     </a>
                     <button
-                      onClick={() => {
-                        if (!isListening) {
-                          activateMicrophone()
-                        } else {
-                          deactivateMicrophone()
+                      onClick={async () => {
+                        try {
+                          if (micStatus === "active") {
+                            await deactivateMicrophone()
+                          } else {
+                            await activateMicrophone()
+                          }
+                        } catch (error) {
+                          console.error("Failed to toggle microphone:", error)
+                          setMicStatus("error")
+                          setIsListening(false)
                         }
                       }}
                       className={`flex items-center space-x-3 py-2 px-4 rounded-lg transition-all duration-200 ${
-                        isListening && micStatus === "active"
+                        micStatus === "active"
                           ? 'bg-[#F3F0FF] text-[#6B2FFA] animate-pulse'
                           : micStatus === "error"
                             ? 'bg-[#FFF4E5] text-[#B76E00]'
@@ -542,14 +563,14 @@ export default function Home() {
                       disabled={micStatus === "error"}
                     >
                       <Mic className={`h-4 w-4 ${
-                        isListening && micStatus === "active" 
+                        micStatus === "active" 
                           ? 'animate-bounce' 
                           : micStatus === "error" 
                             ? 'text-[#B76E00]' 
                             : ''
                       }`} />
                       <span className="text-[14px]">
-                        {isListening && micStatus === "active"
+                        {micStatus === "active"
                           ? "Listening..." 
                           : micStatus === "error"
                             ? "Microphone Error"
@@ -668,21 +689,21 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="px-8 py-6 bg-[#F5F5F5] flex justify-between">
-                <Button 
-                  onClick={() => router.push('/peripheral')}
-                  className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
-                >
-                  Try Peripheral Test
-                </Button>
-                <Button 
-                  onClick={restartTest} 
-                  className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
-                >
-                  Test Again
-                </Button>
+                <div className="px-8 py-6 bg-[#F5F5F5] flex justify-between">
+                  <Button 
+                    onClick={() => router.push('/peripheral')}
+                    className="bg-white border border-[#6B2FFA] text-[#6B2FFA] hover:bg-[#F3F0FF] rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                  >
+                    Try Peripheral Test
+                  </Button>
+                  <Button 
+                    onClick={restartTest} 
+                    className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-6 py-3 text-[14px] font-medium transition-all duration-200"
+                  >
+                    Test Again
+                  </Button>
+                </div>
               </div>
             </div>
           )}
