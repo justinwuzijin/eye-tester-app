@@ -321,15 +321,21 @@ export default function PeripheralTest() {
   }
 
   const handleVoiceResult = async (transcript: string) => {
-    // First deactivate the microphone and ensure we're not listening
+    // First deactivate the microphone
     await deactivateMicrophone()
     setIsListening(false)
     setMicStatus("inactive")
     
     // Set the transcript and normalize it
-    setLastTranscript(transcript)
+    setLastTranscript(transcript.toLowerCase())
+    
+    // Remove spaces and convert to lowercase for comparison
     const normalizedTranscript = transcript.toLowerCase().replace(/\s+/g, '')
-    const isCorrect = normalizedTranscript.includes(currentLetter.toLowerCase())
+    const normalizedCurrentLetter = currentLetter.toLowerCase()
+    
+    // Handle double letters by removing duplicates from transcript
+    const cleanedTranscript = [...new Set(normalizedTranscript.split(''))].join('')
+    const isCorrect = cleanedTranscript === normalizedCurrentLetter
     
     // Always update total attempts
     setResults((prev) => ({
@@ -346,10 +352,10 @@ export default function PeripheralTest() {
       // Check if we've completed all trials
       if (nextLevel >= TOTAL_TRIALS) {
         // End test with success
-        setStep("results")
         const score = Math.round((results.correct / results.total) * 100)
-        let resultMessage = ""
+        localStorage.setItem('peripheralAccuracy', `${score}%`)
         
+        let resultMessage = ""
         if (score >= 80) {
           resultMessage = "Excellent peripheral vision! You successfully identified letters in your side vision."
         } else if (score >= 60) {
@@ -359,6 +365,7 @@ export default function PeripheralTest() {
         }
         
         await speakText(formatSpeech(`All done! ${resultMessage}`))
+        setStep("results")
         return
       }
       
@@ -385,44 +392,22 @@ export default function PeripheralTest() {
       setFailedAttempts(newFailedAttempts)
       
       if (newFailedAttempts >= MAX_ATTEMPTS_PER_TRIAL) {
-        // Move to next trial after max attempts
-        const nextLevel = currentLevel + 1
+        // End test after max attempts
+        const score = Math.round((results.correct / results.total) * 100)
+        localStorage.setItem('peripheralAccuracy', `${score}%`)
         
-        if (nextLevel >= TOTAL_TRIALS) {
-          // End test if we've completed all trials
-          setStep("results")
-          const score = Math.round((results.correct / results.total) * 100)
-          let resultMessage = ""
-          
-          if (score >= 80) {
-            resultMessage = "Good peripheral vision! You identified most letters successfully."
-          } else if (score >= 60) {
-            resultMessage = "Your peripheral vision might need some attention. Consider consulting an eye doctor."
-          } else {
-            resultMessage = "It seems you had difficulty with side vision. We recommend consulting an eye doctor."
-          }
-          
-          await speakText(formatSpeech(`All done! ${resultMessage}`))
+        let resultMessage = ""
+        if (score >= 80) {
+          resultMessage = "Good peripheral vision! You identified most letters successfully."
+        } else if (score >= 60) {
+          resultMessage = "Your peripheral vision might need some attention. Consider consulting an eye doctor."
         } else {
-          // Continue to next trial
-          setCurrentLevel(nextLevel)
-          setFailedAttempts(0)
-          const newLetter = generateRandomLetter()
-          const newPosition = generateRandomPosition()
-          setCurrentLetter(newLetter)
-          setCurrentPosition(newPosition)
-          setProgress((nextLevel / TOTAL_TRIALS) * 100)
-          
-          // Give feedback and wait
-          await speakText(formatSpeech("Let's try the next letter."))
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          // Start next attempt with fresh state
-          setIsListening(false)
-          setMicStatus("inactive")
-          await new Promise(resolve => setTimeout(resolve, 100))
-          activateMicrophone()
+          resultMessage = "It seems you had difficulty with side vision. We recommend consulting an eye doctor."
         }
+        
+        await speakText(formatSpeech(`All done! ${resultMessage}`))
+        setStep("results")
+        return
       } else {
         // Still have attempts remaining - try again
         const newLetter = generateRandomLetter()
