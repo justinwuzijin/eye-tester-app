@@ -473,6 +473,10 @@ export default function Home() {
       } else {
         // Reached the best possible vision level (20/20)
         setStep("results")
+        // Store results in localStorage
+        const accuracy = Math.round((results.lastCorrectIndex + 1) / SNELLEN_LEVELS.length * 100)
+        localStorage.setItem('snellenScore', results.prescription)
+        localStorage.setItem('snellenAccuracy', `${accuracy}%`)
         await speakText(formatSpeech("Congratulations! You've achieved perfect 20/20 vision!"))
       }
     } else {
@@ -483,6 +487,10 @@ export default function Home() {
       if (newWrongAttempts >= 3) {
         // Failed this level after 3 wrong attempts
         setStep("results")
+        // Store results in localStorage
+        const accuracy = Math.round((results.lastCorrectIndex + 1) / SNELLEN_LEVELS.length * 100)
+        localStorage.setItem('snellenScore', results.prescription)
+        localStorage.setItem('snellenAccuracy', `${accuracy}%`)
         await speakText(formatSpeech(`Test complete. Your prescription is ${results.prescription}`))
       } else {
         // Still have attempts remaining
