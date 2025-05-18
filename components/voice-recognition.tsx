@@ -63,6 +63,8 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
   const analyser = useRef<AnalyserNode | null>(null)
   const mediaStream = useRef<MediaStream | null>(null)
   const animationFrame = useRef<number | null>(null)
+  const isProcessingResult = useRef(false)
+  const recognitionStarting = useRef(false)
 
   // Initialize audio context and analyser
   useEffect(() => {
@@ -116,6 +118,41 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
     setAudioLevel(0)
   }
 
+  const startRecognition = async () => {
+    if (!recognition || recognitionStarting.current || isProcessingResult.current) return
+
+    try {
+      recognitionStarting.current = true
+      console.log("Starting recognition...")
+      
+      // Ensure clean state
+      recognition.abort()
+      cleanupAudioVisualization()
+      
+      // Small delay to ensure cleanup is complete
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Start recognition
+      await setupAudioVisualization()
+      recognition.start()
+      
+    } catch (err) {
+      console.error("Failed to start recognition:", err)
+      setError("Failed to start speech recognition. Please try again.")
+      setIsListening(false)
+    } finally {
+      recognitionStarting.current = false
+    }
+  }
+
+  const stopRecognition = () => {
+    if (!recognition) return
+    console.log("Stopping recognition...")
+    recognition.abort()
+    cleanupAudioVisualization()
+    isProcessingResult.current = false
+  }
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -126,24 +163,32 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
       }
 
       const recognitionInstance = new SpeechRecognition()
-      recognitionInstance.continuous = true
+      recognitionInstance.continuous = false
       recognitionInstance.interimResults = false
       recognitionInstance.lang = "en-US"
 
       recognitionInstance.onstart = () => {
         console.log("Speech recognition started")
         setError(null)
-        setupAudioVisualization()
       }
 
       recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
         console.log("Speech recognition result received", event.results)
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase()
+        
+        // Stop listening and process result
+        isProcessingResult.current = true
+        stopRecognition()
         onResult(transcript)
       }
 
       recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error", event.error)
+        // Ignore abort errors when we're stopping intentionally
+        if (event.error === 'aborted' && !isListening) {
+          return
+        }
+
+        console.error("Speech recognition error:", event.error)
         let errorMessage = `Error: ${event.error}`
         
         switch (event.error) {
@@ -163,16 +208,16 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
         
         setError(errorMessage)
         setIsListening(false)
-        cleanupAudioVisualization()
+        stopRecognition()
       }
 
       recognitionInstance.onend = () => {
         console.log("Speech recognition ended")
-        if (isListening) {
-          // If we're supposed to be listening, restart
-          recognitionInstance.start()
-        } else {
-          cleanupAudioVisualization()
+        
+        // If we should still be listening and aren't processing a result, restart
+        if (isListening && !isProcessingResult.current && !recognitionStarting.current) {
+          console.log("Restarting recognition...")
+          startRecognition()
         }
       }
 
@@ -180,35 +225,18 @@ export default function VoiceRecognition({ onResult, isListening, setIsListening
     }
 
     return () => {
-      if (recognition) {
-        recognition.abort()
-      }
-      cleanupAudioVisualization()
+      stopRecognition()
     }
-  }, [onResult, setIsListening])
+  }, [onResult, setIsListening, isListening])
 
+  // Handle isListening prop changes
   useEffect(() => {
-    if (recognition) {
-      if (isListening) {
-        try {
-          // Stop any existing recognition first
-          recognition.abort()
-          cleanupAudioVisualization()
-          
-          // Small delay before starting new recognition
-          setTimeout(() => {
-            recognition.start()
-            setupAudioVisualization()
-          }, 100)
-        } catch (err) {
-          console.error("Failed to start recognition:", err)
-          setError("Failed to start speech recognition. Please try again.")
-          setIsListening(false)
-        }
-      } else {
-        recognition.abort()
-        cleanupAudioVisualization()
-      }
+    if (!recognition) return
+
+    if (isListening && !isProcessingResult.current && !recognitionStarting.current) {
+      startRecognition()
+    } else if (!isListening) {
+      stopRecognition()
     }
   }, [isListening, recognition])
 
