@@ -46,13 +46,6 @@ export default function GazeResultsPage() {
         break;
       }
     }
-
-    if (!hasSpokenIntro.current) {
-      setTimeout(() => {
-        speakText(formatSpeech("Welcome to your gaze tracking analysis! I'll walk you through your test results and what they mean for your eye control capabilities."));
-        hasSpokenIntro.current = true;
-      }, 1000);
-    }
   };
 
   useEffect(() => {
@@ -64,17 +57,19 @@ export default function GazeResultsPage() {
       }
       
       loadVoices();
-    }
 
-    // Get results from localStorage
-    const storedGazeAccuracy = localStorage.getItem('gazeAccuracy');
-    const storedReactionTime = localStorage.getItem('reactionTime');
-    
-    if (storedGazeAccuracy) {
-      setGazeAccuracy(storedGazeAccuracy);
-    }
-    if (storedReactionTime) {
-      setReactionTime(storedReactionTime);
+      // Get results from localStorage
+      const storedGazeAccuracy = localStorage.getItem('gazeAccuracy');
+      const storedReactionTime = localStorage.getItem('reactionTime');
+      
+      if (storedGazeAccuracy) {
+        setGazeAccuracy(storedGazeAccuracy);
+      }
+      if (storedReactionTime) {
+        setReactionTime(storedReactionTime);
+      }
+
+
     }
 
     return () => {
@@ -133,121 +128,145 @@ export default function GazeResultsPage() {
   };
 
   return (
-    <div className="container min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      <header className="max-w-2xl mx-auto mb-12 px-6 pt-16">
-        <div className="flex items-center gap-2 mb-12">
-          <div className="w-3 h-3 bg-[#6B2FFA] rounded-sm"></div>
-          <span className="text-[0.9375rem] font-medium">4Sight</span>
-        </div>
-        <h1 className="text-4xl font-semibold tracking-tight mb-4">
-          Gaze Tracking Analysis
-        </h1>
-        <p className="text-[0.9375rem] text-gray-600 dark:text-gray-400 mb-8">
-          A detailed analysis of your eye tracking performance and capabilities
-        </p>
-        <nav className="flex gap-4">
-          <button 
-            onClick={() => document.getElementById('test-results')?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-6 py-3 text-sm font-medium bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#E6E0FF] dark:hover:bg-gray-600 transition-colors"
-            aria-label="View test results"
-          >
-            Test Results
-          </button>
-          <button
-            onClick={() => document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-6 py-3 text-sm font-medium bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#E6E0FF] dark:hover:bg-gray-600 transition-colors"
-            aria-label="View recommendations"
-          >
-            Recommendations
-          </button>
-          <button
-            onClick={() => router.push('/gaze-tester')}
-            className="px-6 py-3 text-sm font-medium bg-white dark:bg-gray-800 border border-[#6B2FFA] dark:border-purple-300 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#F3F0FF] dark:hover:bg-gray-700 transition-colors"
-            aria-label="Return to test"
-          >
-            Return to Test
-          </button>
-        </nav>
-      </header>
-
-      <section id="test-results" className="max-w-2xl mx-auto mb-12 px-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-medium">Test Results Summary</h2>
-            <button
-              onClick={speakResults}
-              className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
-              aria-label="Read results aloud"
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+      <div className="max-w-2xl mx-auto px-6 py-16">
+        <header className="mb-12">
+          <div className="flex items-center gap-2 mb-12">
+            <div className="w-3 h-3 bg-[#6B2FFA] rounded-sm"></div>
+            <span className="text-[0.9375rem] font-medium">4Sight</span>
+          </div>
+          <h1 className="text-4xl font-semibold tracking-tight mb-4">
+            Gaze Tracking Analysis
+          </h1>
+          <p className="text-[0.9375rem] text-gray-600 dark:text-gray-400 mb-8">
+            A detailed analysis of your eye tracking performance and capabilities
+          </p>
+          <nav className="flex gap-4">
+            <button 
+              onClick={() => document.getElementById('test-results')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-6 py-3 text-sm font-medium bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#E6E0FF] dark:hover:bg-gray-600 transition-colors"
+              aria-label="View test results"
             >
-              <Volume2 className="h-4 w-4" />
-              <span>Read Results</span>
+              Test Results
             </button>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6 text-center">
-              <h3 className="text-sm font-medium mb-4">Gaze Accuracy</h3>
-              <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
-                {gazeAccuracy}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Tracking Precision</p>
-            </div>
-            <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6 text-center">
-              <h3 className="text-sm font-medium mb-4">Average Reaction Time</h3>
-              <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
-                {reactionTime}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Response Speed</p>
-            </div>
-          </div>
-        </div>
-      </section>
+            <button
+              onClick={() => document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-6 py-3 text-sm font-medium bg-[#F3F0FF] dark:bg-gray-700 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#E6E0FF] dark:hover:bg-gray-600 transition-colors"
+              aria-label="View recommendations"
+            >
+              Recommendations
+            </button>
+            <button
+              onClick={() => router.push('/gaze-tester')}
+              className="px-6 py-3 text-sm font-medium bg-white dark:bg-gray-800 border border-[#6B2FFA] dark:border-purple-300 text-[#6B2FFA] dark:text-purple-300 rounded-lg hover:bg-[#F3F0FF] dark:hover:bg-gray-700 transition-colors"
+              aria-label="Return to test"
+            >
+              Return to Test
+            </button>
+          </nav>
+        </header>
 
-      <section id="recommendations" className="max-w-2xl mx-auto mb-12 px-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
-          <h2 className="text-xl font-medium mb-6">Improvement Recommendations</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              {
-                name: "Eye Exercises",
-                info: "Regular eye movement exercises to improve gaze control and tracking ability.",
-                duration: "10-15 mins daily",
-                icon: "👁️"
-              },
-              {
-                name: "Screen Breaks",
-                info: "Take regular breaks to reduce eye strain and maintain optimal tracking performance.",
-                duration: "Every 20 mins",
-                icon: "⏲️"
-              },
-              {
-                name: "Focus Practice",
-                info: "Practice switching focus between near and far objects to enhance eye control.",
-                duration: "5 mins, 3x daily",
-                icon: "🎯"
-              },
-              {
-                name: "Tracking Games",
-                info: "Play eye-tracking games to improve accuracy and reaction time in a fun way.",
-                duration: "15-20 mins daily",
-                icon: "🎮"
-              }
-            ].map((recommendation, index) => (
-              <div 
-                key={recommendation.name}
-                className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 transition-transform hover:-translate-y-1"
-                style={{ animationDelay: `${index * 0.05}s` }}
+        <section id="test-results" className="max-w-2xl mx-auto mb-12 px-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-medium">Test Results Summary</h2>
+              <button
+                onClick={speakResults}
+                className="flex items-center space-x-2 text-[14px] text-[#6B2FFA] hover:text-[#5925D9] dark:text-purple-300 dark:hover:text-purple-200 transition-colors"
+                aria-label="Read results aloud"
               >
-                <div className="text-2xl mb-3">{recommendation.icon}</div>
-                <h3 className="font-medium mb-2">{recommendation.name}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{recommendation.info}</p>
-                <p className="text-sm font-medium text-[#6B2FFA] dark:text-purple-300">
-                  {recommendation.duration}
-                </p>
+                <Volume2 className="h-4 w-4" />
+                <span>Read Results</span>
+              </button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6 text-center">
+                <h3 className="text-sm font-medium mb-4">Gaze Accuracy</h3>
+                <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
+                  {gazeAccuracy}
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Tracking Precision</p>
               </div>
-            ))}
+              <div className="bg-[#F3F0FF] dark:bg-gray-700 rounded-lg p-6 text-center">
+                <h3 className="text-sm font-medium mb-4">Average Reaction Time</h3>
+                <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
+                  {reactionTime}
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Response Speed</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section id="interpretation" className="max-w-2xl mx-auto mb-12 px-6">
+          <div className="grid gap-4">
+            <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
+              <h3 className="text-[14px] font-medium text-[#2C2C2C]">Interpretation</h3>
+              <p className="text-[14px] text-[#666666] leading-relaxed">
+                {parseInt(gazeAccuracy) >= 90 && parseFloat(reactionTime) <= 0.6
+                  ? "Your eye tracking capabilities are excellent! Your gaze control and reaction time are well above average."
+                  : parseInt(gazeAccuracy) >= 70 && parseFloat(reactionTime) <= 1.0
+                  ? "Your eye tracking performance is good, but there's room for improvement. Regular practice can help enhance your gaze control."
+                  : "Consider practicing more with eye-tracking exercises to improve your gaze control and reaction time. Regular practice will help enhance your performance."
+                }
+              </p>
+            </div>
+
+            <div className="bg-[#FFF4E5] p-4 rounded-lg">
+              <p className="text-[12px] text-[#B76E00] text-center">
+                This is not a medical diagnosis. Results may vary based on device screen, lighting conditions, and individual factors. Please consult an eye care professional for a comprehensive evaluation.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="recommendations" className="max-w-2xl mx-auto mb-12 px-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
+            <h2 className="text-xl font-medium mb-6">Improvement Recommendations</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              {[
+                {
+                  name: "Eye Exercises",
+                  info: "Regular eye movement exercises to improve gaze control and tracking ability.",
+                  duration: "10-15 mins daily",
+                  icon: "👁️"
+                },
+                {
+                  name: "Screen Breaks",
+                  info: "Take regular breaks to reduce eye strain and maintain optimal tracking performance.",
+                  duration: "Every 20 mins",
+                  icon: "⏲️"
+                },
+                {
+                  name: "Focus Practice",
+                  info: "Practice switching focus between near and far objects to enhance eye control.",
+                  duration: "5 mins, 3x daily",
+                  icon: "🎯"
+                },
+                {
+                  name: "Tracking Games",
+                  info: "Play eye-tracking games to improve accuracy and reaction time in a fun way.",
+                  duration: "15-20 mins daily",
+                  icon: "🎮"
+                }
+              ].map((recommendation, index) => (
+                <div 
+                  key={recommendation.name}
+                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 transition-transform hover:-translate-y-1"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="text-2xl mb-3">{recommendation.icon}</div>
+                  <h3 className="font-medium mb-2">{recommendation.name}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{recommendation.info}</p>
+                  <p className="text-sm font-medium text-[#6B2FFA] dark:text-purple-300">
+                    {recommendation.duration}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 } 

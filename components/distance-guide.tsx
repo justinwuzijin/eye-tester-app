@@ -191,8 +191,10 @@ export default function DistanceGuide({
       } ${compact ? 'text-xs' : ''}`}>
         {distance === null ? (
           <div className="space-y-1">
-            <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>Face not detected 👀</p>
-            <p className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-600`}>Please ensure your face is visible</p>
+            <p className={`${compact ? 'text-xs' : 'text-sm'} font-medium text-[#DC2626]`}>Face not detected 👀</p>
+            {!compact && (
+              <p className="text-xs text-[#B91C1C]">Please ensure your face is visible</p>
+            )}
           </div>
         ) : (
           <>

@@ -665,16 +665,21 @@ export default function Home() {
               <div className="grid gap-4">
                 <div className="bg-[#F3F0FF] p-6 rounded-lg space-y-3">
                   <h3 className="text-[14px] font-medium text-[#2C2C2C]">Test Performance</h3>
-                  <div className="space-y-2">
-                    <p className="text-[14px] text-[#666666]">
-                      • Smallest text size read: {SNELLEN_LEVELS[results.lastCorrectIndex].fontSizePx}px
-                    </p>
-                    <p className="text-[14px] text-[#666666]">
-                      • Completed levels: {results.lastCorrectIndex + 1}
-                    </p>
-                    <p className="text-[14px] text-[#666666]">
-                      • Reading accuracy: {Math.round((results.lastCorrectIndex + 1) / SNELLEN_LEVELS.length * 100)}%
-                    </p>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-gray-700 rounded-lg p-6 text-center">
+                      <h3 className="text-sm font-medium mb-4">Reading Accuracy</h3>
+                      <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
+                        {Math.round((results.lastCorrectIndex + 1) / SNELLEN_LEVELS.length * 100)}%
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Vision Score</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-700 rounded-lg p-6 text-center">
+                      <h3 className="text-sm font-medium mb-4">Text Size</h3>
+                      <div className="text-4xl font-semibold text-[#6B2FFA] dark:text-purple-300 mb-2">
+                        {SNELLEN_LEVELS[results.lastCorrectIndex].fontSizePx}px
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Smallest Read</p>
+                    </div>
                   </div>
                 </div>
 
