@@ -580,17 +580,12 @@ export default function Home() {
                 }} />
               </div>
               <div className="px-8 py-6 bg-[#F5F5F5] flex justify-end">
-                <Button
-                  onClick={startLetterTest}
-                  disabled={!isCorrectDistance}
-                  className={`${
-                    isCorrectDistance 
-                      ? 'bg-[#6B2FFA] hover:bg-[#5925D9]' 
-                      : 'bg-gray-400 cursor-not-allowed'
-                  } text-white rounded-lg px-4 py-2 text-[14px] font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap`}
-                >
-                  Continue <ArrowRight className="h-4 w-4" />
-                </Button>
+              <Button
+                onClick={startLetterTest}
+                className="bg-[#6B2FFA] hover:bg-[#5925D9] text-white rounded-lg px-4 py-2 text-[14px] font-medium transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
+              >
+                Continue <ArrowRight className="h-4 w-4" />
+              </Button>
               </div>
             </div>
           )}
