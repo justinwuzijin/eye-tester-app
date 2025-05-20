@@ -10,6 +10,7 @@ import { ArrowRight, Mic, Volume2 } from "lucide-react"
 import DistanceGuide from "@/components/distance-guide"
 import VoiceRecognition from "@/components/voice-recognition"
 import MicrophoneSetup from "@/components/microphone-setup"
+import { Logo } from "@/components/Logo"
 
 // Generate random string of lowercase letters
 const generateRandomString = (length: number) => {
@@ -511,10 +512,7 @@ export default function Home() {
       <div className="max-w-2xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 rounded-sm bg-[#6B2FFA]"></div>
-            <h2 className="text-[15px] font-medium text-[#2C2C2C]">4Sight</h2>
-          </div>
+          <Logo />
           {step !== "intro" && (
             <button 
               onClick={restartTest}
